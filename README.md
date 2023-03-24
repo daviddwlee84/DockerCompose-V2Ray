@@ -54,9 +54,10 @@ Update from the original repo:
    3. `data/v2ray/config.json`
       1. Change id to use your own `"id": "bae399d4-13a4-46a3-b144-4af2c0004c2e"` (or you can leave it as what it is)
       2. You can generate new UUID using this online tool: [Online UUID Generator Tool](https://www.uuidgenerator.net/)
-   4. `data/nginx/conf.d/v2ray.conf` (but currently it will be override by `init-letsencrypt.sh`?! whatever)
+   4. `data/nginx/conf.d/v2ray.conf`
       1. Modify all `your_domain`
-      2. You can use vim `:%s/your_domain/your-dns-name.japaneast.cloudapp.azure.com/g`
+      2. You can use vim `:%s/your_domain/your-dns-name.japaneast.cloudapp.azure.com/g`<br>
+      _**Note that this modification is necessary**_ though it will be backed up, overridden by `init-letsencrypt.sh` and restored during running `./init-letsencrypt.sh`. It will be used by nginx docker afterwards.
 4. Setup Nginx and HTTPS encryption stuff
     1. `chmod +x ./init-letsencrypt.sh`
     2. `./init-letsencrypt.sh`
