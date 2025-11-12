@@ -63,11 +63,26 @@ clash-1  | time="2024-11-21T11:56:12Z" level=info msg="inbound socks://:7891 cre
 clash-1  | time="2024-11-21T11:56:12Z" level=info msg="RESTful API listening at: 127.0.0.1:9090"
 ```
 
+> NOTE: `export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7891` this depends on your config, like:
+>
+> ```yaml
+> port: 7890
+> socks-port: 7891
+> allow-lan: true
+> external-controller: 0.0.0.0:9090
+> external-ui: ui_pages
+> ```
+>
+> NOTE: if we use docker, we should set "allow-lan: true" otherwise host cannot access.
+> As well as external-controller should set to `0.0.0.0:9090`
+
 ```bash
 # Test with Google
 sudo apt install w3m
 w3m google.com
 ```
+
+You can change config and set some routing in the Web UI
 
 http://localhost:9090/ui/
 http://localhost:9090/ui/?secret=clash_secret

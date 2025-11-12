@@ -4,13 +4,13 @@ services:
     container_name: clash
     ports:
       # export http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890 all_proxy=socks5://127.0.0.1:7891
-      - "7890:7890"  # HTTP Proxy Port
-      - "7891:7891"  # SOCKS5 Proxy Port
+      - "7890:7890" # HTTP Proxy Port
+      - "7891:7891" # SOCKS5 Proxy Port
 
       # export http_proxy=http://127.0.0.1:7891 https_proxy=http://127.0.0.1:7891 all_proxy=socks5://127.0.0.1:7891
       # - "7891:7891"  # Mixed (HTTP + SOCKS5) Port
 
-      - "9090:9090"  # Dashboard or API Port
+      - "9090:9090" # Dashboard or API Port; Set `external-ui: ui_pages` in config.yaml; http://localhost:9090/ui/
     volumes:
       - ./config.yaml:/root/.config/clash/config.yaml
       - ./ui_pages:/root/.config/clash/ui_pages
