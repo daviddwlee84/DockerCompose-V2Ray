@@ -103,7 +103,8 @@ ansible-playbook playbooks/rotate-uuid.yml -e new_uuid=$(uuidgen)
 - `inventory/` — `prod.ini.example` and `dev.ini.example`; real `prod.ini`/`dev.ini` are gitignored.
 - `group_vars/all.yml` — non-secret defaults (tz, deploy path, ports).
 - `group_vars/vpn/vars.yml` — per-group indirection: `domain: "{{ vault_domain }}"`.
-- `group_vars/vpn/vault.yml` — encrypted secrets (gitignored unless encrypted).
+- `group_vars/vpn/vault.yml` — single-host encrypted secrets (gitignored). Use this when you maintain one long-lived VPS by hand.
+- `host_vars/<rg>/vault.yml` — per-host encrypted secrets (gitignored). The Azure throwaway flow (`just az-configure`) writes one per tracked VM. Takes precedence over `group_vars/vpn/vault.yml` when both are present. See [`docs/MULTI-HOST.md`](../docs/MULTI-HOST.md).
 - `playbooks/site.yml` — full deploy (all roles in order).
 - `playbooks/deploy.yml` — app-only, for config tweaks.
 - `playbooks/rotate-uuid.yml` — rotate V2Ray UUID.

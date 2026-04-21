@@ -211,3 +211,848 @@ _**Agent (claude-opus-4-7)**_
 <summary>Tool use: **read_file_v2**</summary>
 
 </details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "outputMode": "files_with_matches",
+  "path": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray",
+  "pattern": "last-vm|LAST_VM|az-cycle|az-up"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "files_with_matches",
+  "path": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray",
+  "pattern": "last-vm|LAST_VM|az-cycle|az-up",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "README.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": "Justfile"
+    },
+    {
+      "matchCount": 1,
+      "uri": "scripts/az_up.sh"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".cursor/plans/deployment_evaluation_docs_f695ede0.plan.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".specstory/history/2026-04-21_11-24-15Z-azure-vm-setup-and-v2ray-configuration.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": "docs/DeploymentEvaluation.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": "scripts/az_down.sh"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".specstory/history/2026-04-21_12-26-30Z-infrastructure-as-code-evaluation.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": "scripts/az_configure.py"
+    },
+    {
+      "matchCount": 1,
+      "uri": "scripts/vmess_client.py"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".cursor/plans/azure-e2e-validation_6aac789d.plan.md"
+    }
+  ],
+  "totalFiles": 11,
+  "totalMatches": 11
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "outputMode": "content",
+  "path": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/scripts",
+  "pattern": "ip-address|IpConfig|public-ip|publicIpAddress|static|dynamic"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/scripts",
+  "pattern": "ip-address|IpConfig|public-ip|publicIpAddress|static|dynamic",
+  "topFiles": [
+    {
+      "matchCount": 3,
+      "uri": "scripts/az_up.sh"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ Let me review the chat history and agent transcript to see what was discussed before.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+Now I have a clear picture. Let me quickly check the referenced chat transcript and the DeploymentEvaluation doc to understand prior context.
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: ls -la /Users/daviddwlee84/.cursor/projects/Volumes-Data-Program-Personal-DockerCompose-V2Ray/agent-transcripts/54c3b42d-5410-45e5-9bb7-1ad4af9d90c9/ 2>/dev/null | head -20</summary>
+
+```bash
+ls -la /Users/daviddwlee84/.cursor/projects/Volumes-Data-Program-Personal-DockerCompose-V2Ray/agent-transcripts/54c3b42d-5410-45e5-9bb7-1ad4af9d90c9/ 2>/dev/null | head -20
+```
+
+```
+ 54c3b42d-5410-45e5-9bb7-1ad4af9d90c9.jsonl
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "context": 1,
+  "outputMode": "content",
+  "path": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/docs/DeploymentEvaluation.md",
+  "pattern": "last-vm|PUBLIC_IP|DNS|region|multi"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/docs/DeploymentEvaluation.md",
+  "pattern": "last-vm|PUBLIC_IP|DNS|region|multi",
+  "topFiles": [
+    {
+      "matchCount": 16,
+      "uri": "docs/DeploymentEvaluation.md"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 6
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ Looking at the deployment scripts, I see that `az_up.sh` creates a single `last-vm.json` file and won't overwrite it without an explicit flag to prevent orphaning previous VMs, while `az_configure.py` reads from that one file—which suggests the current setup doesn't support multi-machine or multi-region deployments out of the box.
+
+The Ansible side could handle multiple hosts fine if I added more entries to the inventory, but each would need its own domain for Let's Encrypt certificates, requiring per-host variables instead of shared group variables. The real blocker is that the helper scripts are designed around a single VM per resource group, with `last-vm.json` as a scalar handoff.
+
+On the IP reassignment question, I'm realizing that Azure's Standard SKU public IPs are actually static by default—they don't change on reboot. The user's concern about reassignment probably comes from older Basic SKU behavior, which used dynamic IPs.
+
+To rotate the IP while keeping the DNS name, I could delete and recreate the public IP resource while reattaching the same DNS label, since the label is bound to the public IP resource itself. But a cleaner approach would be using a custom domain with Azure DNS, where I control the A record directly instead of relying on the `cloudapp.azure.com` FQDN.
+
+The user is asking these as exploratory questions rather than requesting implementation, so I should first answer the factual parts about Azure's behavior, then clarify what they're actually trying to achieve. I need to understand whether they want multi-region support as just the ability to manage multiple VMs in the inventory simultaneously, or a full automated deployment loop across regions. Similarly, for IP rotation, I should ask whether they want a dedicated command and whether they prefer staying with the Azure DNS label or moving to a custom domain approach.
+
+Let me verify the Azure facts I'm relying on—Basic SKU public IPs are being retired soon and support dynamic allocation, while Standard SKU only supports static allocation but you can still rotate by deleting and recreating the resource. The DNS label is tied to the public IP itself, so rotation either means reapplying the same label to a new IP or switching to custom DNS records.
+
+Before I give a full answer, I should ask the user a few clarifying questions about their setup and constraints.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+I have enough context to answer the factual questions. Let me quickly verify one detail about Azure Standard vs Basic SKU public IP behaviour since the user's question hinges on that.
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="web_search">
+<details>
+<summary>Tool use: **web_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "searchTerm": "Azure public IP Standard SKU static vs Basic SKU dynamic — does rebooting/deallocating release the IP in 2025-2026 after Basic SKU retirement"
+}
+```
+Result:
+
+```json
+{
+  "isFinal": true,
+  "references": [
+    {
+      "chunk": "Links:\n1. [Azure updates | Microsoft Azure](https://azure.microsoft.com/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/)\n2. [Upgrade Basic Public IP Address to Standard SKU in Azure | Microsoft Learn](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-basic-upgrade-guidance)\n3. [Upgrade a public IP address | Microsoft Learn](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-upgrade)\n4. [\n\tImpact of the retirement of Basic SKU Public IP ad... - Fortinet Community\n](https://community.fortinet.com/t5/FortiGate-Azure-Technical/Impact-of-the-retirement-of-Basic-SKU-Public-IP-address-in/ba-p/357654)\n5. [Preparing for the Retirement of Azure Basic SKU Public IP Addresses - Kraft Kennedy](https://www.kraftkennedy.com/preparing-for-the-retirement-of-azure-basic-sku-public-ip-addresses/)\n\nIn Azure, **Basic SKU public IPs were retired on September 30, 2025** [1, 2].\n\n### Does rebooting/deallocating release the IP?\n*   **Dynamic Basic IPs:** If you are using a **Dynamic** Basic SKU public IP, deallocating the associated virtual machine (VM) will release the IP address back to the Azure pool [4]. You will lose that specific IP address upon restart.\n*   **Static Basic IPs:** If you have a **Static** Basic SKU public IP, the IP address is reserved and will **not** be released when you reboot or deallocate the VM [3, 7]. \n\n### Important Considerations for 2026\n*   **Post-Retirement Status:** Basic SKU public IPs remain operational after the September 30, 2025, retirement date, but they are **unsupported** and not covered by SLA guarantees [2].\n*   **Upgrade Requirement:** To move to the Standard SKU, you must first ensure the IP is set to **Static** allocation [3, 6]. The upgrade process requires the IP to be **disassociated** from any resource (e.g., VM, NIC) [3, 7].\n*   **Downtime:** Upgrading requires disassociating the IP, which causes downtime [6, 7]. For VMs in an Availability Set, you must stop and deallocate all VMs in the cluster to successfully perform the upgrade, as the SKU configuration must be consistent across the set [6].\n*   **DNS Labels:** Upgrading a public IP resource retains the IP address [3, 7]. Because the underlying resource (the Public IP object) remains the same, your associated &#96;cloudapp.azure.com&#96; DNS label is preserved during the upgrade process.\n\nReferences:\n[1] https://azure.microsoft.com/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/\n    Title: Azure updates | Microsoft Azure\n    Relevance: This page directly addresses the user's query by announcing the retirement of Basic SKU public IP addresses in Azure on September 30, 2025. It states that new Basic SKU IPs cannot be created after March 31, 2025, and recommends upgrading to Standard SKU IPs to avoid service disruptions.\n[2] https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-basic-upgrade-guidance\n    Title: Upgrade Basic Public IP Address to Standard SKU in Azure | Microsoft Learn\n    Relevance: This page discusses the retirement of Basic SKU public IPs in Azure and provides guidance on upgrading to Standard SKU. It details the differences between the SKUs and outlines steps for migration, including specific instructions for various Azure resources.\n[3] https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-upgrade\n    Title: Upgrade a public IP address | Microsoft Learn\n    Relevance: This page directly addresses the user's query by stating that Basic SKU public IPs were retired on September 30, 2025, and advises upgrading to Standard SKU IPs. It also explains the differences between Basic and Standard SKUs regarding functionality and allocation.\n[4] https://community.fortinet.com/t5/FortiGate-Azure-Technical/Impact-of-the-retirement-of-Basic-SKU-Public-IP-address-in/ba-p/357654\n    Title: \n\tImpact of the retirement of Basic SKU Public IP ad... - Fortinet Community\n\n    Relevance: This page discusses the retirement of Azure Basic SKU Public IP addresses and the transition to Standard SKU. It explains that after September 30, 2025, Basic SKUs will be retired, and new ones cannot be created after March 31, 2025. The page also details the advantages of Standard SKUs, potential issues with the transition, and the impact on Fortinet solutions, particularly regarding default outbound connectivity.\n[5] https://www.kraftkennedy.com/preparing-for-the-retirement-of-azure-basic-sku-public-ip-addresses/\n    Title: Preparing for the Retirement of Azure Basic SKU Public IP Addresses - Kraft Kennedy\n    Relevance: This page discusses the retirement of Azure Basic SKU Public IP addresses and the migration to Standard SKU. It mentions that Basic SKU IPs will be decommissioned after September 30, 2025, potentially causing outages if not upgraded. The page highlights the benefits of Standard SKU, such as zone-redundancy and enhanced security.\n[6] https://docs.workspot.com/docs/customer-advisory-upgrade-basic-public-ip-to-standard-public-ip-in-azure\n    Title: Upgrade Basic Public IP SKU to Standard SKU in Azure\n    Relevance: This page discusses the deprecation of Azure Basic SKU Public IP addresses, with a retirement date of September 30, 2025. It explains that upgrading from Basic to Standard SKU requires shutting down and deallocating VMs to release IP configurations, implying that deallocation does release the IP.\n[7] https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/public-ip-upgrade-vm\n    Title: Upgrade public IP addresses attached to a VM from Basic to Standard - Azure Virtual Network | Microsoft Learn\n    Relevance: This page discusses the retirement of Basic SKU public IPs on September 30, 2025, and guides users on upgrading to Standard SKU public IPs. It explains that during the upgrade process, Basic SKU IPs are set to static before being disassociated from the VM, ensuring the IP address does not change.\n[8] https://www.reddit.com/r/msp/comments/1mq27c3/basic_public_ip_retirement_and_basic_virtual/\n    Title: Basic Public IP retirement and Basic Virtual Network ...\n    Relevance: This Reddit post discusses the upcoming retirement of Azure Basic Public IPs and Basic VPN Gateways. It highlights the challenges of migrating to Standard SKUs, including potential connection issues and increased costs, and asks for information on official migration paths.\n[9] https://learn.microsoft.com/en-us/answers/questions/5556867/will-basic-sku-public-ips-attached-to-vms-stop-wor\n    Title: Will Basic SKU Public IPs attached to VMs stop working ...\n    Relevance: This page states that Basic SKU Public IPs will stop working after September 16, 2025, and will be deallocated. This directly addresses the user's concern about Basic SKU retirement and its impact on IP addresses.\n[10] https://learn.microsoft.com/en-ca/answers/questions/2247815/public-ip-sku-update-issue\n    Title: Public IP SKU update issue - Microsoft Q\u0026A\n    Relevance: This page explains how to remove a public IP address from a virtual machine in the Azure portal. It provides steps to set the Public IP to \"None\" to disassociate it, which is relevant to understanding IP address management in Azure.",
+      "title": "Web search results"
+    }
+  ],
+  "rejected": false
+}
+```
+User decision: **accepted**
+
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="web_search"><details>
+<summary>Tool use: **web_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ Let me organize what I'm working with here. Ansible already handles multiple hosts natively—I just need to add more entries under the `[vpn]` section in the inventory file. The Azure helper scripts, though, are currently locked into single-machine deployments with hardcoded values, so those will need reworking to support multiple regions and machines.
+
+For the vault configuration, each host needs its own variables since every Azure FQDN is unique. On IP rotation, the user's thinking is based on older Azure behavior—Standard SKU public IPs are static now, so rebooting won't change the address. To rotate while keeping the same DNS label, I'd need to detach the old public IP, delete it, create a new one with the same DNS label in that region, then reattach it. But the cleaner approach is moving to a custom domain entirely, which lets me just update DNS records when IPs change.
+
+Now I'm thinking through what the user is really asking: they want either multi-region/multi-VM backups or a way to get a fresh IP when blocked by the GFW without losing their DNS name. Both paths lead to either extending the current single-VM flow to handle multiple regions with separate resource groups and per-host variables, or redesigning the whole thing to track multiple VMs in a list and generate proper multi-host inventory. For IP rotation specifically, custom domains are the way forward since they decouple the DNS name from the IP entirely. I should ask which direction they prefer—keep the lightweight approach of running the setup multiple times with different parameters, or invest in first-class multi-region support with proper tooling.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+先直接回答這兩個問題，再確認一下你想要的範圍方向。
+
+## 現況：單機 vs 多機
+
+短答：**底層 Ansible 已支援多機，受限的只是外層 `az_*` 助手和 secrets 結構。**
+
+- `ansible/inventory/prod.ini.example` 的 `[vpn]` 是一個 group，你可以直接寫多行 host，`just deploy` 會同時 deploy 所有 host。
+- 真正把流程卡在單機的是 throwaway Azure 那條路：
+  - [scripts/az_up.sh](scripts/az_up.sh) line 81-83：`last-vm.json` 已存在就直接 `die`（除非 `AZ_OVERWRITE=1`，而且那會 orphan 舊 VM）。每次 up 會隨機產生一個 `AZ_RG="vpn-test-<user>-<unix-ts>"`，所以多跑幾次等於重置。
+  - [scripts/az_configure.py](scripts/az_configure.py) line 108-134：讀單一 `last-vm.json` → 寫出只有一個 `azure` host 的 `prod.ini`。
+  - [ansible/group_vars/vpn/vault.yml](ansible/group_vars/vpn/vault.yml)（example）只有一組 `vault_domain` / `vault_v2ray_uuid`。每台 VM 的 `*.cloudapp.azure.com` FQDN 不同，又要走 Let's Encrypt，所以多機必須把 `domain`（和通常也一起 rotate 的 `v2ray_uuid`）搬到 `host_vars/<host>.yml`。
+
+所以要做成「多 region 同時 deploy」有兩種作法，見下面問題。
+
+## 現況：IP rotation 和你的記憶
+
+你的記憶**是對的，但那是舊 Basic SKU + Dynamic allocation 的行為**。現在這條 repo 已經用不到了：
+
+- [scripts/az_up.sh](scripts/az_up.sh) line 154：`--public-ip-sku Standard`。**Standard SKU public IP 一律 static**，deallocate / reboot 都**不會**換 IP。
+- 加上 Basic SKU 已於 **2025-09-30 正式 retire**（[MS 公告](https://azure.microsoft.com/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/)），就算想回去用舊方式也已不可行。
+
+要在**不改 DNS name** 的前提下換一組 IP，可行做法有兩條：
+
+1. **留在 `*.cloudapp.azure.com`**：DNS label 是綁在 public IP 資源上的一個 region-unique string，不是綁在 IP 本身。所以流程是「detach PIP → delete PIP → create 新 PIP 套同一個 dns-name → reattach 到 NIC」，FQDN 不變，IP 變。大致像：
+   ```bash
+   az network nic ip-config update -g $RG --nic-name <nic> -n ipconfigvpn --remove PublicIpAddress
+   az network public-ip delete -g $RG -n <pip>
+   az network public-ip create -g $RG -n <pip> --sku Standard --dns-name $SAME_LABEL
+   az network nic ip-config update -g $RG --nic-name <nic> -n ipconfigvpn \
+       --public-ip-address <pip>
+   ```
+   VM 不用 re-deploy（cert、v2ray config 全留著），只斷連幾十秒。
+2. **改用自有 domain + DNS API**：Cloudflare / Route53 / Azure DNS 放一個 A record 指到 Azure IP，rotation 就只是更新 A record。這條路還順便解掉 "跨 cloud 時 FQDN 就換了" 的問題（CLAUDE.md line 88 的 "operator moves between Azure/GCP/Hetzner"）、也可以把 LE 從 HTTP-01 換到 DNS-01。
+
+在下手之前先確認兩件事會影響計畫大小：
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ask_question">
+<details>
+<summary>Tool use: **ask_question**</summary>
+
+
+Parameters:
+
+```json
+{
+  "questions": [
+    {
+      "id": "multi_region_scope",
+      "options": [
+        {
+          "id": "doc_only",
+          "label": "(A) 文件化：保持單機 az_* helpers，在 docs 寫明「多跑幾次 az-up、手動合併 prod.ini + 搬 vault 到 host_vars」的步驟即可，不改 code"
+        },
+        {
+          "id": "lightweight",
+          "label": "(B) 輕量擴充：az_up.sh 支援不同 AZ_RG 並列（last-vm.json 改成 last-vm-\u003crg\u003e.json），az_configure.py 能從多份 handoff 合併出多 host inventory + per-host vault；保留手動選擇要 deploy 哪幾台"
+        },
+        {
+          "id": "full_fleet",
+          "label": "(C) 一鍵多 region：新增 just az-up-region \u003cregion\u003e、just az-list、just az-down \u003crg\u003e，單一指令 deploy 到全部現有 VM（近似小型 fleet 管理）"
+        }
+      ],
+      "prompt": "多 region / 多機 deploy 想做到什麼程度？"
+    },
+    {
+      "id": "ip_rotation_approach",
+      "options": [
+        {
+          "id": "azure_label",
+          "label": "(1) 留在 *.cloudapp.azure.com：加 just az-rotate-ip \u003crg\u003e，detach+delete+recreate PIP 套回同一個 DNS label，VM + 證書 + v2ray 設定全留。只在 Azure 上有效"
+        },
+        {
+          "id": "custom_domain",
+          "label": "(2) 改自有 domain + DNS API：新增一個 dns role（先支援 Cloudflare 或 Azure DNS 其中一個），Ansible 部署時自動更新 A record；rotate IP 等於重開 PIP + 更新 A record。跨 cloud 通用，但要你有 domain 和 API token"
+        },
+        {
+          "id": "both",
+          "label": "(3) 兩條都要：default 維持 *.cloudapp.azure.com，但提供 opt-in custom-domain 路徑（CUSTOM_DOMAIN=vpn.example.com 就走 DNS API，沒設就走 azure label rotation）"
+        }
+      ],
+      "prompt": "IP rotation 走哪條路？"
+    }
+  ]
+}
+```
+Additional data:
+
+```json
+{
+  "currentSelections": {},
+  "status": "submitted"
+}
+```
+Result:
+
+```json
+{
+  "answers": [
+    {
+      "questionId": "multi_region_scope"
+    },
+    {
+      "questionId": "ip_rotation_approach"
+    }
+  ]
+}
+```
+User decision: **accepted**
+
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="ask_question"><details>
+<summary>Tool use: **ask_question**</summary>
+
+</details></tool-use>
+
+---
+
+_**User**_
+
+以下是來自OpenCode的feedback
+```
+一、事實校正（你的分析有兩處要修）
+1. az_up.sh:154 已經是 --public-ip-sku Standard，不是 Basic SKU + Dynamic。所以「reboot/deallocate 換 IP」這條路在這 repo 從來就走不通，不是「現在用不到了」— 是本來就用不到。請改寫那段現況描述，避免讀者以為曾經能 rotate。
+2. Basic SKU retire 屬實，但對這 repo 是非問題（從未使用過）。可以一句話帶過，不要當成主要論點。
+---
+二、關於「多 region / 多機 deploy」這題
+選 (B) 輕量擴充，理由：
+- (A) 文件化太陽春。last-vm.json 是 single-file state，跑第二次直接被 AZ_OVERWRITE 擋下或孤兒化前一台，靠人腦合 inventory + vault 太容易出事。
+- (C) 一鍵多 region overkill。我不是在管 fleet，是個人 VPN。寫 az-up-region / az-list / az-down <rg> 之後還要面對「同時 N 台時 deploy 怎麼選目標」「verify 怎麼跑全部」，這些是真工作量但不見得每天用得到。
+- (B) 解的問題很乾淨：
+  - last-vm.json → .secrets/azure/vms/<rg>.json + vms/current symlink，自然支援多台共存。
+  - az_configure.py 改掃 vms/*.json，產 multi-host inventory；vault 從 single file 變 host_vars/<host>/vault.yml，每台一組 UUID。
+  - verify / az-client / az-down / az-cycle 加 HOST= 或 RG= env var 選目標，不傳就對 inventory 全部跑（或拒絕跑 + 列出選項，看哪個比較不會誤觸）。
+---
+三、關於「IP rotation 走哪條路」這題
+選 (1) *.cloudapp.azure.com + az-rotate-ip <rg>，理由：
+- 零新依賴。Standard SKU 已就位、DNS label 是現成的，只是把四條 az 指令包成 idempotent script。
+- FQDN 不變 → LE cert 不用重簽 → vault domain 不用改 → client config 完全不換。被牆時 30 秒切完，這是真正想要的 UX。
+- 跟 multi-host 重構完全正交，可以分兩個 PR 獨立處理。
+不選 (2) 自有 domain + DNS API：
+- 解的是還沒發生的問題。CLAUDE.md line 88 "operator moves between Azure/GCP/Hetzner" 是未來可能性，不是現況。為此引入 Cloudflare/Route53 token + DNS role 是 premature abstraction。
+- 新增 attack surface：API token 進 vault、Ansible role 呼叫外部 API、處理 rate limit / 回滾。
+- LE 從 HTTP-01 換 DNS-01 沒有現有痛點 — port 80 + certbot sidecar 自動續簽正常，沒壞別修。
+不選 (3) 兩條都做：
+- 是正確的最終形態，但「兩套路徑共存」的維護成本實在 — nginx template / letsencrypt role / vault schema 都要分歧，沒 CI 的情況下分支 bug 容易溜進去。
+- 正確做法：開 docs/IP-ROTATION.md 寫清楚 (1) 的腳本怎麼用，未來想跨 cloud 時 (2) 怎麼接（大綱即可），(3) 標 "future, when actually needed"。延伸 CLAUDE.md "Don't re-litigate decided constraints" 的精神 — 記下決策跟取捨，不為未必發生的情境寫 code。
+---
+四、IP rotation 跟 multi-region 是兩件事，不要混在同一段討論
+從你的 issue 排版看起來容易誤會這是同一題，其實：
+- IP rotation = 同一台 VM、同一個 FQDN、換 public IP（被牆時用）。獨立小腳本就解決，跟 inventory 無關。
+- Multi-region = 多台 VM、多個 FQDN、可能同時跑（跳板 / backup / 地理就近）。要動 inventory + vault 結構。
+請把這兩題拆成兩個 issue / 兩個 PR，互不依賴，各自合併。
+---
+五、az_rotate_ip.sh 的實作要點
+# 輸入：RG 名（或從 .secrets/azure/vms/<rg>.json 讀 location/vm/dns_label）
+# 流程：
+#   1. 從現有 PIP 撈 dns_label、location、name（驗證 sku=Standard）
+#   2. 找 NIC 上的 ip-config，--remove PublicIPAddress
+#   3. az network public-ip delete
+#   4. az network public-ip create 同 name + 同 dns-name + Standard
+#   5. az network nic ip-config update 把新 PIP attach 回去
+#   6. 撈新 IP，update .secrets/azure/vms/<rg>.json 的 public_ip 欄位
+#   7. dig +short $FQDN 驗證 DNS 已指到新 IP（Azure 通常 < 30 秒）
+#   8. 提示：FQDN / cert / v2ray UUID 全部不變，client 不用換
+Footgun 要寫在腳本開頭：detach → delete → create 之間 public IP 會短暫消失，SSH session 會斷。腳本只能在 laptop 跑，不能在 VPS 上跑。明確 log 一行警告。
+---
+六、建議的 commit / PR 順序
+1. scripts/az_rotate_ip.sh + just az-rotate-ip + docs/IP-ROTATION.md（最小、獨立、立刻有用）
+2. last-vm.json → vms/<rg>.json 重構 + vms/current symlink（保留向後相容讀取，新寫只寫新格式）
+3. az_configure.py 掃多檔，產 multi-host inventory + per-host vault（host_vars/<host>/vault.yml）
+4. verify / az-client / az-down / az-cycle 加 HOST= / RG= 選目標
+5. docs/MULTI-HOST.md 收尾，記下「為什麼選 B 不選 C」「為什麼 host_vars 而不是 group 拆分」
+第 1 步跟第 2-5 步完全獨立，可以平行進行 / 任意順序合併
+```
+
+---
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ Got clear feedback from OpenCode on the implementation approach—I need to correct my factual error about az_up.sh's SKU, go with the lightweight multi-region option and Azure DNS label for IP rotation, split this into two separate PRs, and follow their detailed implementation outline and commit order for az_rotate_ip.sh.
+
+Now I'm reviewing the existing documentation style in DeploymentEvaluation.md and LEGACY.md to match the format, and checking whether there's already a host_vars structure in place or if I need to establish one.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/docs/DeploymentEvaluation.md</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **3** results in **1** directory</summary>
+
+Directory: **** (3 files)
+
+| File |
+|------|
+| `ansible/group_vars/all.yml` |
+| `ansible/group_vars/vpn/vault.yml.example` |
+| `ansible/group_vars/vpn/vars.yml` |
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **** (0 files)
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/scripts/verify.sh</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/ansible/group_vars/vpn/vars.yml</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **1** result in **1** directory</summary>
+
+Directory: **** (1 file)
+
+| File |
+|------|
+| `ansible/group_vars/vpn/vault.yml.example` |
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/ansible/group_vars/vpn/vault.yml.example</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **1** result in **1** directory</summary>
+
+Directory: **** (1 file)
+
+| File |
+|------|
+| `scripts/vmess_client.py` |
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/scripts/vmess_client.py</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ I've got the full picture now. The user wants two separate PRs: the first handles IP rotation with a script and documentation, while the second tackles the bigger structural changes for multi-host and multi-region support.
+
+For PR 2, I need to migrate the single VM config to a per-region structure, update the Python configuration script to scan multiple host files and generate both a consolidated inventory and per-host vault files, then modify the existing commands to accept either a HOST or RG parameter. I should also create documentation for this new multi-host setup.
+
+There are no existing docs on either topic, so I'm starting fresh. Let me build out the implementation plan now.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+OpenCode 的回饋方向清楚 — 拆兩條獨立 PR，IP rotation 小而立刻可用，multi-host 是結構性重構。把這個整理成 plan。
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="create_plan">
+<details>
+<summary>Tool use: **create_plan**</summary>
+
+
+Parameters:
+
+```json
+{
+  "name": "ip-rotation and multi-host",
+  "overview": "Split into two independent PRs: (1) a small &#96;az-rotate-ip&#96; helper that rotates the public IP while keeping the &#96;*.cloudapp.azure.com&#96; FQDN, cert, and UUID unchanged — for when the IP gets GFW-banned; (2) a structural refactor from single-VM (&#96;last-vm.json&#96;) to multi-VM (&#96;vms/\u003crg\u003e.json&#96; + &#96;vms/current&#96;) with per-host vault in &#96;host_vars/&#96;, so multiple regions / backup nodes can coexist.",
+  "plan": "# IP rotation + multi-host deploy\n\nTwo **independent** PRs. Either can merge first. No shared files except a one-liner cross-ref in [README.md](README.md).\n\n## Why two PRs, not one\n\n- **IP rotation** = same VM, same FQDN, new public IP. No inventory / vault changes.\n- **Multi-host** = multiple VMs, multiple FQDNs. Touches &#96;last-vm.json&#96; layout, &#96;az_configure.py&#96;, &#96;host_vars/&#96;, and every &#96;az_*&#96; helper.\n\nThey're orthogonal (per OpenCode feedback section IV). Mixing them in one PR would bloat the review and couple unrelated risk.\n\n---\n\n## PR 1 — &#96;just az-rotate-ip \u003crg\u003e&#96; (small, standalone, ship first)\n\n### What it does\n\nRotate the Standard SKU public IP attached to an Azure VM, keeping the &#96;\u003cdns-label\u003e.\u003cregion\u003e.cloudapp.azure.com&#96; FQDN unchanged. FQDN stays → Let's Encrypt cert stays → &#96;vault_domain&#96; stays → client configs stay. Just a new IP from Azure's pool.\n\nRelies on a property of Azure's Standard SKU PIP + DNS label: **the DNS label is a region-unique string stored on the PIP resource, not bound to the IP itself.** Delete and recreate the PIP with the same &#96;--dns-name&#96; → same FQDN, new IP.\n\n### Files\n\n- **New: [scripts/az_rotate_ip.sh](scripts/az_rotate_ip.sh)** — bash, &#96;set -euo pipefail&#96;, same log / die pattern as [scripts/az_up.sh](scripts/az_up.sh).\n- **New: [docs/IP-ROTATION.md](docs/IP-ROTATION.md)** — when to use, what it does / doesn't change, footguns, future cross-cloud notes (1-2 paragraphs pointing at custom-domain + DNS API as \"when we actually go multi-cloud\").\n- **Edit: [Justfile](Justfile)** — add &#96;az-rotate-ip&#96; target after &#96;az-down&#96;.\n- **Edit: [README.md](README.md)** — one-line mention in the \"One-shot Azure validation\" section.\n\n### &#96;scripts/az_rotate_ip.sh&#96; flow\n\n&#96;&#96;&#96;bash\n# Inputs\n#   AZ_RG (required — positional arg or env var)\n#   Reads .secrets/azure/last-vm.json (pre-multi-host) OR\n#         .secrets/azure/vms/\u003crg\u003e.json (post-multi-host) for location/vm/dns_label\n\n# Preflight\n#   - az CLI logged in\n#   - RG exists\n#   - PIP on the VM is sku=Standard (refuse if Basic; print migration hint)\n#   - Running from laptop, not the VPS (check hostname or bail on $SSH_CONNECTION)\n\n# Rotation (idempotent-ish; each step checks current state)\n#   1. Read PIP name, dns_label, location from the VM's NIC ip-config\n#   2. az network nic ip-config update --remove PublicIPAddress     # detach\n#   3. az network public-ip delete  -g $RG -n $PIP                  # release IP\n#   4. az network public-ip create  -g $RG -n $PIP \\\n#        --sku Standard --allocation-method Static \\\n#        --dns-name $SAME_LABEL                                     # new IP, same FQDN\n#   5. az network nic ip-config update --set PublicIPAddress=...    # reattach\n#   6. Capture new IP; update .secrets/azure/{last-vm.json|vms/$RG.json} public_ip field\n#   7. dig +short $FQDN  → verify DNS propagated (\u003c30s usually)\n#   8. Log: \"FQDN / cert / UUID unchanged — no client reconfiguration needed\"\n&#96;&#96;&#96;\n\n### Footguns (print at start + top of docs)\n\n- **Runs on laptop only.** The script cannot run on the VPS itself — step 2 would kill its own SSH session before step 5 can reattach.\n- **~30-60s outage.** Between detach and reattach, the VM has no public IP. Existing TCP connections break.\n- **DNS label is kept, not the IP.** If you need a stable IP (allow-lists elsewhere), this script is the wrong tool.\n- **Standard SKU only.** Refuse on Basic SKU (already retired 2025-09-30 per [MS announcement](https://azure.microsoft.com/updates/upgrade-to-standard-sku-public-ip-addresses-in-azure-by-30-september-2025-basic-sku-will-be-retired/)); &#96;az_up.sh&#96; already uses Standard so this is only a sanity check.\n\n### Out of scope for PR 1\n\n- Custom-domain rotation (Cloudflare / Azure DNS / Route53). Documented as \"future, when &#96;CLAUDE.md&#96; line 88 actually materializes.\" A one-paragraph outline in &#96;docs/IP-ROTATION.md&#96; is enough.\n- Any change to &#96;ansible/&#96; — cert, vault, nginx conf all untouched by design.\n\n---\n\n## PR 2 — Multi-host (structural, ship after PR 1 merges)\n\n### Shape change\n\n- &#96;.secrets/azure/last-vm.json&#96; (single file) → &#96;.secrets/azure/vms/\u003crg\u003e.json&#96; (one per VM) + &#96;.secrets/azure/vms/current&#96; symlink to the most recent.\n- &#96;ansible/group_vars/vpn/vault.yml&#96; (single) → &#96;ansible/host_vars/\u003chost\u003e/vault.yml&#96; (per-host). Each VM has its own &#96;vault_domain&#96; and &#96;vault_v2ray_uuid&#96;.\n- &#96;ansible/group_vars/vpn/vars.yml&#96; stays — it's just the plain-name alias layer; works for any host.\n- Inventory: &#96;[vpn]&#96; section grows from one &#96;azure …&#96; line to one per RG, host name = RG name (unique per-cycle, maps cleanly to &#96;host_vars/\u003crg\u003e/&#96;).\n\n### Backward compat\n\n- &#96;scripts/az_up.sh&#96; writes &#96;vms/\u003crg\u003e.json&#96; (new primary) + maintains &#96;last-vm.json&#96; as a copy-of-current for one release cycle, tagged with a deprecation note.\n- &#96;scripts/vmess_client.py&#96; and any other reader prefers &#96;vms/current&#96; → falls back to &#96;last-vm.json&#96;. Delete &#96;last-vm.json&#96; fallback in a follow-up PR after this is proven.\n\n### Files\n\n**Edits:**\n\n- [scripts/az_up.sh](scripts/az_up.sh) — drop the \"refuse if last-vm.json exists\" guard (line 81-83); write &#96;vms/\u003crg\u003e.json&#96;, update &#96;vms/current&#96; symlink; skip the &#96;AZ_OVERWRITE&#96; codepath.\n- [scripts/az_configure.py](scripts/az_configure.py) — &#96;load_vm()&#96; → &#96;load_vms()&#96; (list); &#96;write_inventory()&#96; loops; &#96;write_vault()&#96; writes to &#96;ansible/host_vars/\u003crg\u003e/vault.yml&#96; per VM.\n- [scripts/az_down.sh](scripts/az_down.sh) — accept positional &#96;\u003crg\u003e&#96; or read from &#96;vms/current&#96;; remove only that VM's &#96;vms/\u003crg\u003e.json&#96; + &#96;host_vars/\u003crg\u003e/&#96;; update &#96;vms/current&#96; to the next most recent (or unlink if empty).\n- [scripts/vmess_client.py](scripts/vmess_client.py) — accept &#96;--host \u003crg\u003e&#96; / &#96;RG=\u003crg\u003e&#96;; default to &#96;vms/current&#96;; decrypts per-host vault at &#96;host_vars/\u003crg\u003e/vault.yml&#96;.\n- [scripts/verify.sh](scripts/verify.sh) — already takes &#96;DOMAIN&#96; env var, no code change but docs update: \"loop with &#96;for rg in vms/*.json; do DOMAIN=$(jq -r .fqdn $rg) just verify; done&#96;\".\n- [Justfile](Justfile) — &#96;az-client&#96;, &#96;az-down&#96; accept &#96;RG=\u003crg\u003e&#96; (default: &#96;vms/current&#96;); &#96;az-cycle&#96; documents it tears down only the last-created VM; &#96;deploy&#96; unchanged (Ansible handles the multi-host loop natively).\n- [ansible/inventory/prod.ini.example](ansible/inventory/prod.ini.example) — example with two hosts to document the shape.\n- [ansible/group_vars/vpn/vault.yml.example](ansible/group_vars/vpn/vault.yml.example) — add a header note \"if you use the Azure throwaway flow, vault lives under host_vars/\u003crg\u003e/vault.yml instead.\"\n\n**New:**\n\n- [docs/MULTI-HOST.md](docs/MULTI-HOST.md) — records the decision (option B from the clarifying Q, not A / not C), shape of &#96;vms/\u003crg\u003e.json&#96;, &#96;host_vars/\u003crg\u003e/vault.yml&#96; layout, how &#96;just deploy&#96; targets all hosts vs &#96;RG=xxx just az-client&#96; targets one. One mermaid showing laptop → &#96;vms/&#96; → inventory → N Azure VMs.\n\n### Target selection convention\n\nOpenCode raised \"拒絕跑 + 列出選項 vs 全部跑.\" Proposal:\n\n- &#96;just deploy&#96;: **run against all hosts.** Ansible does this natively via &#96;[vpn]&#96; group. This is the desired behavior — update all nodes at once.\n- &#96;just verify&#96;, &#96;just az-client&#96;, &#96;just az-down&#96;: **require &#96;RG=\u003crg\u003e&#96; when \u003e1 VM exists, list options otherwise.** These are per-host operations; silently defaulting to one is the footgun. Default to &#96;vms/current&#96; **only when exactly one VM exists**.\n- &#96;just az-cycle&#96;: stays single-VM (it's the original up-deploy-verify-client-down loop); document that multi-host is manual composition of &#96;az-up&#96; × N + &#96;deploy&#96; + &#96;az-down RG=xxx&#96; × N.\n\n### Out of scope for PR 2\n\n- Multi-region parallelization. Each &#96;az-up&#96; is still one-at-a-time.\n- Protecting against accidentally deploying an in-flight uuid rotation to only half the fleet — single operator, low risk, not worth the tooling.\n- Migrating existing users automatically. First run after upgrade: a one-liner detects legacy &#96;last-vm.json&#96; and prints the migration command (&#96;mv last-vm.json vms/$(jq -r .rg last-vm.json).json \u0026\u0026 ln -sf …&#96;).\n\n---\n\n## Diagrams\n\n### Before (today)\n\n&#96;&#96;&#96;mermaid\nflowchart LR\n  Laptop[\"Operator laptop\"] --\u003e|az_up.sh| LastVM[\"last-vm.json\u003cbr/\u003e(single)\"]\n  LastVM --\u003e|az_configure.py| Inventory[\"prod.ini\u003cbr/\u003e(1 host)\"]\n  LastVM --\u003e|az_configure.py| Vault[\"group_vars/vpn/vault.yml\u003cbr/\u003e(1 domain, 1 UUID)\"]\n  Inventory --\u003e|ansible| VM[\"Azure VM\"]\n  Vault --\u003e|ansible| VM\n&#96;&#96;&#96;\n\n### After PR 2\n\n&#96;&#96;&#96;mermaid\nflowchart LR\n  Laptop[\"Operator laptop\"] --\u003e|\"az_up.sh × N\"| VmsDir[\"vms/\u003crg\u003e.json × N\u003cbr/\u003evms/current symlink\"]\n  VmsDir --\u003e|az_configure.py| Inventory[\"prod.ini\u003cbr/\u003e(N hosts)\"]\n  VmsDir --\u003e|az_configure.py| HostVars[\"host_vars/rg1/vault.yml\u003cbr/\u003ehost_vars/rg2/vault.yml\u003cbr/\u003e...\"]\n  Inventory --\u003e|ansible| VM1[\"Azure VM tokyo\"]\n  Inventory --\u003e|ansible| VM2[\"Azure VM singapore\"]\n  HostVars --\u003e|ansible| VM1\n  HostVars --\u003e|ansible| VM2\n&#96;&#96;&#96;\n\n### IP rotation (PR 1, any VM)\n\n&#96;&#96;&#96;mermaid\nsequenceDiagram\n  participant L as Laptop\n  participant N as VM NIC\n  participant P as Public IP\n  participant D as Azure DNS\n  L-\u003e\u003eN: detach PIP\n  L-\u003e\u003eP: delete PIP (IP released to pool)\n  L-\u003e\u003eP: create PIP, same dns-name\n  L-\u003e\u003eN: attach new PIP\n  L-\u003e\u003eD: dig +short FQDN → new IP\n  Note over L,D: FQDN / cert / UUID unchanged\n&#96;&#96;&#96;\n\n## Non-goals (both PRs)\n\n- No Terraform / OpenTofu. Decided in [CLAUDE.md](CLAUDE.md) and [docs/DeploymentEvaluation.md](docs/DeploymentEvaluation.md).\n- No protocol migration to Xray / VLESS.\n- No custom-domain + DNS API integration. Cross-cloud rotation is marked \"future, when actually needed\" per OpenCode section III.\n- No multi-tenant / shared vault. Single operator assumption holds.",
+  "todos": [
+    {
+      "content": "Write scripts/az_rotate_ip.sh (detach+delete+recreate PIP, keep dns-name, update vms/*.json)",
+      "id": "pr1-rotate-script",
+      "status": "pending"
+    },
+    {
+      "content": "Add just az-rotate-ip target",
+      "id": "pr1-justfile",
+      "status": "pending"
+    },
+    {
+      "content": "Write docs/IP-ROTATION.md and add one-line cross-ref in README.md",
+      "id": "pr1-docs",
+      "status": "pending"
+    },
+    {
+      "content": "Migrate .secrets/azure/last-vm.json -\u003e vms/\u003crg\u003e.json + vms/current symlink in az_up.sh / az_down.sh",
+      "id": "pr2-vms-layout",
+      "status": "pending"
+    },
+    {
+      "content": "Update az_configure.py to scan vms/*.json and emit multi-host inventory + per-host host_vars/\u003crg\u003e/vault.yml",
+      "id": "pr2-configure-multi",
+      "status": "pending"
+    },
+    {
+      "content": "Teach verify / az-client / az-down / az-cycle to accept RG=\u003crg\u003e (require it when \u003e1 VM exists)",
+      "id": "pr2-target-selection",
+      "status": "pending"
+    },
+    {
+      "content": "Write docs/MULTI-HOST.md capturing the decision (B, not A/C) and per-host vault layout; update examples",
+      "id": "pr2-docs",
+      "status": "pending"
+    }
+  ]
+}
+```
+Additional data:
+
+```json
+{
+  "hasOpenedEditor": true,
+  "planId": "ip-rotation_and_multi-host_60dce46a",
+  "planUri": "file:///Users/daviddwlee84/.cursor/plans/ip-rotation_and_multi-host_60dce46a.plan.md",
+  "reviewData": {
+    "isShowingInput": false,
+    "selectedOption": "none",
+    "status": "Requested"
+  }
+}
+```
+Result:
+
+```json
+{
+  "rejected": {}
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="create_plan"><details>
+<summary>Tool use: **create_plan**</summary>
+
+</details></tool-use>
+
+---
+
+_**User**_
+
+Implement the plan as specified, it is attached for your reference. Do NOT edit the plan file itself.
+
+To-do's from the plan have already been created. Do not create them again. Mark them as in_progress as you work, starting with the first one. Don't stop until you have completed all the to-dos.
+
+---
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ Starting with PR 1 since it's self-contained and can be deployed independently. I'll mark that task as in progress and work through the IP rotation script, add the justfile target, and write the documentation. Then I'll move on to PR 2 for the multi-host migration.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="todo_write">
+<details>
+<summary>Tool use: **todo_write**</summary>
+
+
+Parameters:
+
+```json
+{
+  "merge": true
+}
+```
+Result:
+
+```json
+{
+  "finalTodos": [
+    {
+      "content": "Write scripts/az_rotate_ip.sh (detach+delete+recreate PIP, keep dns-name, update vms/*.json)",
+      "id": "pr1-rotate-script",
+      "status": "in_progress"
+    },
+    {
+      "content": "Add just az-rotate-ip target",
+      "id": "pr1-justfile",
+      "status": "pending"
+    },
+    {
+      "content": "Write docs/IP-ROTATION.md and add one-line cross-ref in README.md",
+      "id": "pr1-docs",
+      "status": "pending"
+    },
+    {
+      "content": "Migrate .secrets/azure/last-vm.json -\u003e vms/\u003crg\u003e.json + vms/current symlink in az_up.sh / az_down.sh",
+      "id": "pr2-vms-layout",
+      "status": "pending"
+    },
+    {
+      "content": "Update az_configure.py to scan vms/*.json and emit multi-host inventory + per-host host_vars/\u003crg\u003e/vault.yml",
+      "id": "pr2-configure-multi",
+      "status": "pending"
+    },
+    {
+      "content": "Teach verify / az-client / az-down / az-cycle to accept RG=\u003crg\u003e (require it when \u003e1 VM exists)",
+      "id": "pr2-target-selection",
+      "status": "pending"
+    },
+    {
+      "content": "Write docs/MULTI-HOST.md capturing the decision (B, not A/C) and per-host vault layout; update examples",
+      "id": "pr2-docs",
+      "status": "pending"
+    }
+  ],
+  "initialTodos": [
+    {
+      "content": "Write scripts/az_rotate_ip.sh (detach+delete+recreate PIP, keep dns-name, update vms/*.json)",
+      "id": "pr1-rotate-script",
+      "status": "pending"
+    },
+    {
+      "content": "Add just az-rotate-ip target",
+      "id": "pr1-justfile",
+      "status": "pending"
+    },
+    {
+      "content": "Write docs/IP-ROTATION.md and add one-line cross-ref in README.md",
+      "id": "pr1-docs",
+      "status": "pending"
+    },
+    {
+      "content": "Migrate .secrets/azure/last-vm.json -\u003e vms/\u003crg\u003e.json + vms/current symlink in az_up.sh / az_down.sh",
+      "id": "pr2-vms-layout",
+      "status": "pending"
+    },
+    {
+      "content": "Update az_configure.py to scan vms/*.json and emit multi-host inventory + per-host host_vars/\u003crg\u003e/vault.yml",
+      "id": "pr2-configure-multi",
+      "status": "pending"
+    },
+    {
+      "content": "Teach verify / az-client / az-down / az-cycle to accept RG=\u003crg\u003e (require it when \u003e1 VM exists)",
+      "id": "pr2-target-selection",
+      "status": "pending"
+    },
+    {
+      "content": "Write docs/MULTI-HOST.md capturing the decision (B, not A/C) and per-host vault layout; update examples",
+      "id": "pr2-docs",
+      "status": "pending"
+    },
+    {
+      "content": "test if we can successfully run entire cycle!",
+      "id": "todo-1776775876426-o43ek61tg",
+      "status": "pending"
+    },
+    {
+      "content": "git commit (with specstory chat history) and merge to master (if you open branches; but we can just develop on master sequentially one by one feature)",
+      "id": "todo-1776775776552-63jwj4blf",
+      "status": "pending"
+    }
+  ],
+  "success": true
+}
+```
+Status: **loading**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="todo_write"><details>
+<summary>Tool use: **todo_write**</summary>
+
+</details></tool-use>

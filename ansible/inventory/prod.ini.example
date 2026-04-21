@@ -1,8 +1,21 @@
 ; Copy to prod.ini and fill in your VPS details.
 ; prod.ini is gitignored (see ansible/inventory/*.local.* pattern in root .gitignore).
+;
+; One line per VM in [vpn]. Host name is free-form but should match the
+; directory under ansible/host_vars/ if you want per-host vault / vars.
+; For the Azure throwaway flow, `just az-configure` regenerates this file
+; automatically from .secrets/azure/vms/*.json — one host line per RG, and
+; per-host encrypted vaults under ansible/host_vars/<rg>/vault.yml.
 
 [vpn]
-; tokyo ansible_host=20.1.2.3 ansible_user=azureuser
+; Single-host example:
+; tokyo ansible_host=20.1.2.3 ansible_user=azureuser ansible_ssh_private_key_file=/abs/path/id_ed25519
+
+; Multi-host example (one domain / uuid per host — keep secrets in host_vars/<name>/vault.yml):
+; tokyo     ansible_host=vpn-aaaa.japaneast.cloudapp.azure.com       ansible_user=azureuser ansible_ssh_private_key_file=/abs/path/tokyo/id_ed25519
+; singapore ansible_host=vpn-bbbb.southeastasia.cloudapp.azure.com   ansible_user=azureuser ansible_ssh_private_key_file=/abs/path/singapore/id_ed25519
 
 [vpn:vars]
-; Override group_vars/vpn/vars.yml here if needed per host.
+; Overrides shared by every VM in the group. Per-host values (domain, UUID,
+; LE email) should live in ansible/host_vars/<host>/vault.yml instead —
+; they're secret and they differ per host.

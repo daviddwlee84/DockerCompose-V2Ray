@@ -110,20 +110,29 @@ vault-encrypt:
     cd {{ansible_dir}} && ansible-vault encrypt group_vars/vpn/vault.yml
 
 # --- Azure throwaway validation ---
+#
+# State layout (see docs/MULTI-HOST.md):
+#   .secrets/azure/vms/<rg>.json  per-VM handoff
+#   .secrets/azure/vms/current    symlink to the most recently created VM
+#   .secrets/azure/last-vm.json   legacy mirror (still written for older readers)
+#
+# az-client / az-down / az-rotate-ip take an optional <rg> positional arg (or
+# RG= env var). With exactly one VM tracked, they default to it; with >1 they
+# require an explicit RG.
 
-# Provision a cheap Azure VM + DNS name (writes .secrets/azure/last-vm.json).
+# Provision a cheap Azure VM + DNS name (writes .secrets/azure/vms/<rg>.json).
 az-up *args:
     scripts/az_up.sh {{args}}
 
-# Render ansible inventory + vault from last-vm.json (uses git email for LE).
+# Render ansible inventory + per-host vaults from vms/*.json (uses git email for LE).
 az-configure *args:
     scripts/az_configure.py {{args}}
 
-# Generate client configs (vmess://, JSON, Clash YAML, human md, PNG + ASCII QR).
+# Generate client configs. Pass --rg <rg> (or RG=<rg>) to pick when multiple VMs are tracked.
 az-client *args:
     scripts/vmess_client.py {{args}}
 
-# Tear down the Azure RG tracked in last-vm.json (use `-y` to skip the prompt).
+# Tear down a single tracked Azure RG. Pass <rg> to target a specific VM; defaults to vms/current.
 az-down *args:
     scripts/az_down.sh {{args}}
 
@@ -131,21 +140,23 @@ az-down *args:
 az-rotate-ip *args:
     scripts/az_rotate_ip.sh {{args}}
 
-# One-shot: provision → configure → deploy → verify → client-config → pause → teardown.
+# One-shot single-VM loop: provision → configure → deploy → verify → client-config → pause → teardown. For multi-region, run az-up per region manually then `just deploy`.
 az-cycle:
     #!/usr/bin/env bash
     set -euo pipefail
     scripts/az_up.sh
+    RG=$(basename "$(readlink .secrets/azure/vms/current)" .json)
+    echo "[az-cycle] Tracking RG=$RG for this cycle."
     scripts/az_configure.py
     # Vault password file is now at .secrets/.vault-pass (or wherever resolve_vault_pass_file() decided).
     export ANSIBLE_VAULT_PASSWORD_FILE="${ANSIBLE_VAULT_PASSWORD_FILE:-$PWD/.secrets/.vault-pass}"
     just deploy
-    DOMAIN=$(jq -r .fqdn .secrets/azure/last-vm.json) just verify
-    scripts/vmess_client.py
+    DOMAIN=$(jq -r .fqdn ".secrets/azure/vms/$RG.json") just verify
+    scripts/vmess_client.py --rg "$RG"
     echo
-    echo "[az-cycle] VM is live. Test the client config, then press Enter to tear down."
+    echo "[az-cycle] VM is live (RG=$RG). Test the client config, then press Enter to tear down."
     read -r _
-    scripts/az_down.sh -y
+    scripts/az_down.sh "$RG" -y
 
 # --- local Docker test harness ---
 

@@ -17,7 +17,13 @@
 #                    schedule). Default: 1800 (= 02:00 Asia/Shanghai, 03:00
 #                    Asia/Tokyo). Set to 'off' to disable.
 #   AZ_YES           Skip the "estimated cost, proceed?" confirm prompt.
-#   AZ_OVERWRITE     Clobber an existing last-vm.json (orphans the prior VM).
+#
+# State layout:
+#   .secrets/azure/vms/<rg>.json      per-VM handoff (primary; supports multi-host).
+#   .secrets/azure/vms/current        symlink → most recently created vms/<rg>.json.
+#   .secrets/azure/last-vm.json       legacy mirror of vms/current, for older readers
+#                                     (scripts/vmess_client.py, docs, az_cycle). Will
+#                                     be removed once all readers move to vms/current.
 
 set -euo pipefail
 
@@ -41,7 +47,10 @@ if [ -z "${AZ_DNS_PREFIX:-}" ]; then
 fi
 
 OUT_DIR=".secrets/azure"
-OUT_FILE="$OUT_DIR/last-vm.json"
+VMS_DIR="$OUT_DIR/vms"
+VMS_CURRENT="$VMS_DIR/current"
+OUT_FILE="$VMS_DIR/$AZ_RG.json"
+LEGACY_LAST_VM="$OUT_DIR/last-vm.json"
 KEY_DIR="$OUT_DIR/$AZ_RG"
 
 # --- preflight -------------------------------------------------------------
@@ -76,10 +85,11 @@ else
     SSH_KEY_AUTO_GENERATED=1
 fi
 
-# Guard against stale state: if last-vm.json already exists, refuse unless
-# caller explicitly asked to overwrite. Prevents accidentally orphaning a VM.
-if [ -f "$OUT_FILE" ] && [ "${AZ_OVERWRITE:-0}" != "1" ]; then
-    die "$OUT_FILE already exists. Run 'just az-down' first, or set AZ_OVERWRITE=1 to clobber (this will ORPHAN the previously-tracked VM)."
+# Guard against reusing an RG that still has live state on disk. Each VM
+# owns vms/<rg>.json; AZ_RG is timestamped by default so collisions are
+# rare, but a caller who passed an explicit AZ_RG could hit this.
+if [ -f "$OUT_FILE" ]; then
+    die "$OUT_FILE already exists (AZ_RG=$AZ_RG is in use). Tear down first: 'just az-down $AZ_RG'."
 fi
 
 # --- cost preview + confirm ------------------------------------------------
@@ -217,7 +227,7 @@ log "SSH ready."
 
 # --- persist outputs -------------------------------------------------------
 
-mkdir -p "$OUT_DIR"
+mkdir -p "$VMS_DIR"
 jq -n \
     --arg rg "$AZ_RG" \
     --arg vm "$AZ_VM_NAME" \
@@ -234,8 +244,20 @@ jq -n \
       shutdown_time:$shutdown_time, created_at:$created_at}' \
     > "$OUT_FILE"
 
+# Update the vms/current symlink so single-VM tooling (az_rotate_ip.sh, the
+# legacy last-vm.json fallback, docs using 'current') targets the VM we just
+# created. Existing VMs keep their own vms/<rg>.json and are still selectable
+# by name.
+ln -sfn "$AZ_RG.json" "$VMS_CURRENT"
+
+# Legacy mirror: copy (not symlink — Windows/WSL git doesn't always deref)
+# the current VM's json to last-vm.json so older readers keep working for
+# one release cycle. Safe to delete this block once all readers migrate.
+cp "$OUT_FILE" "$LEGACY_LAST_VM"
+
 log "Wrote $OUT_FILE:"
 cat "$OUT_FILE" >&2
+log "(vms/current → $AZ_RG.json; last-vm.json mirrored for legacy readers.)"
 
 # --- hint: ~/.ssh/config snippet ------------------------------------------
 

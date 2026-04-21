@@ -15,10 +15,12 @@ data/
 ansible/inventory/prod.ini
 ansible/inventory/dev.ini
 ansible/inventory/*.local.*
-# Real vault file (lives beside vault.yml.example). Should be ansible-vault
-# encrypted, but gitignored as a defense-in-depth in case encryption is
-# skipped.
+# Real vault files (live beside vault.yml.example, or under host_vars/ for
+# the Azure throwaway flow). Should be ansible-vault encrypted, but
+# gitignored as defense-in-depth in case encryption is skipped. Per-host
+# dirs for throwaway VMs have timestamped RG names — no point tracking them.
 ansible/group_vars/*/vault.yml
+ansible/host_vars/
 
 # azure-validation helpers: throwaway secrets + generated client configs
 .secrets/

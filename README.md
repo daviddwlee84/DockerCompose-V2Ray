@@ -50,7 +50,7 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 | `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `rotate-uuid`, `verify`, `logs-*`, `vault-edit`. |
 | `clients/cli/` | CLI Clash client setup for Linux. |
 | `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
-| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
+| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
 | `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
 
 ## One-shot Azure validation (throwaway VM)
@@ -65,9 +65,9 @@ and tear it down afterwards, the helpers under [`scripts/`](scripts/) wrap the
 # on every run; pass AZ_SSH_PUBKEY=... to reuse one you already trust.
 
 just az-up            # preview cost, create RG + B2ats_v2 VM + NSG (22/80/443) + DNS
-just az-configure     # render inventory/prod.ini + encrypted vault.yml
+just az-configure     # render inventory/prod.ini + per-host host_vars/<rg>/vault.yml
 just deploy           # existing ansible flow (common + docker + vpn + letsencrypt)
-DOMAIN=$(jq -r .fqdn .secrets/azure/last-vm.json) just verify
+just verify           # with exactly one tracked VM; else RG=<rg> just verify
 just az-client        # emit out/client/{vmess.txt,config.json,clash.yaml,human.md,qr.png}
 just az-rotate-ip     # rotate the public IP, keep the FQDN (use when GFW-banned; see docs/IP-ROTATION.md)
 just az-down -y       # delete the RG (-y skips the type-the-name confirm)
@@ -75,6 +75,13 @@ just az-down -y       # delete the RG (-y skips the type-the-name confirm)
 # Or the whole loop in one shot, with a pause for manual testing before teardown:
 AZ_YES=1 just az-cycle
 ```
+
+Multiple VMs in different regions are supported — state is stored per-RG
+under `.secrets/azure/vms/<rg>.json`, and each VM gets its own encrypted
+`ansible/host_vars/<rg>/vault.yml`. `just deploy` targets every tracked host
+at once; per-host commands (`just verify`, `just az-client`, `just az-down`,
+`just az-rotate-ip`) take an explicit `<rg>` when more than one VM is
+tracked. See [`docs/MULTI-HOST.md`](docs/MULTI-HOST.md) for the full flow.
 
 `scripts/az_up.sh` queries the Azure Retail Prices API and shows an
 hourly / daily / monthly estimate for the target (region, VM size) before
@@ -85,7 +92,7 @@ DevTest-Labs daily auto-shutdown at `AZ_SHUTDOWN_TIME` (default `1800` UTC ≈
 
 Other overrides (all env vars read by `scripts/az_up.sh`): `AZ_LOCATION`,
 `AZ_VM_SIZE`, `AZ_VM_NAME`, `AZ_DNS_PREFIX`, `AZ_SSH_PUBKEY`, `AZ_RG`,
-`AZ_IMAGE`, `AZ_ADMIN_USER`, `AZ_OVERWRITE`. Let's Encrypt email falls back
+`AZ_IMAGE`, `AZ_ADMIN_USER`. Let's Encrypt email falls back
 to `git config user.email` — set `LE_EMAIL=you@example.org` to override. A
 throwaway vault password is written to `.secrets/.vault-pass` on first run
 (gitignored). `out/client/` is also gitignored; the files inside are

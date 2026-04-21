@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: todo-1776774868150-o7gnuotba
     content: git commit (with specstory chat history)
-    status: in_progress
+    status: completed
 isProject: false
 ---
 

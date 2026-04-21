@@ -9858,4 +9858,523 @@ _**Agent (claude-opus-4-7)**_
 _**Agent (claude-opus-4-7)**_
 
 <think><details><summary>Thought Process</summary>
- The README's installation instructions are focused on macOS with Homebrew, but the user is asking whether we should also guide people through scenarios where they're not on macOS or when Ansible isn't already installed on the VPS—basically, how do we handle those setup cases?</details></think>
+ The README's installation instructions are focused on macOS with Homebrew, but the user is asking whether we should also guide people through scenarios where they're not on macOS or when Ansible isn't already installed on the VPS—basically, how do we handle those setup cases?
+
+I think there are two separate concerns here: clarifying that Ansible runs on the laptop (not the VPS), and providing cross-platform installation guidance for users who don't have Homebrew available.
+
+The ansible/README already explains the VPS needs nothing beyond SSH and passwordless sudo, but the top README should make this clearer upfront. For the install instructions, I should expand beyond just the macOS Homebrew approach to cover Debian/Ubuntu systems and pip-based options that work anywhere.
+
+I'll keep the changes focused: add a clarifying line about where Ansible runs, and expand the install section with alternative package managers and installation methods.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/ansible/README.md</summary>
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ I'm noticing the top README is missing a couple of key things—it doesn't explicitly state that the VPS requires no pre-installation, and it lacks non-macOS setup instructions. The ansible/README.md already covers the VPS requirement, so I should pull that clarity into the main README. I'll also expand the installation options section to include Linux alternatives alongside the macOS instructions.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+The top README assumes macOS + brew and leaves "what does the VPS need" implicit (only the `ansible/README.md` spells it out). Let me widen both so non-brew users aren't stuck and the laptop-vs-VPS split is obvious up front.
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/README.md</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/ansible/README.md</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/README.md",
+    "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/ansible/README.md"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "errors": [
+        {
+          "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+          "range": {
+            "endPosition": {
+              "column": 2,
+              "line": 46
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 46
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+          "range": {
+            "endPosition": {
+              "column": 6,
+              "line": 46
+            },
+            "startPosition": {
+              "column": 5,
+              "line": 46
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the right for style \"compact\"]",
+          "range": {
+            "endPosition": {
+              "column": 6,
+              "line": 46
+            },
+            "startPosition": {
+              "column": 5,
+              "line": 46
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD060/table-column-style: Table column style [Table pipe is missing space to the left for style \"compact\"]",
+          "range": {
+            "endPosition": {
+              "column": 10,
+              "line": 46
+            },
+            "startPosition": {
+              "column": 9,
+              "line": 46
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD040/fenced-code-language: Fenced code blocks should have a language specified",
+          "range": {
+            "endPosition": {
+              "column": 4,
+              "line": 98
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 98
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        }
+      ],
+      "relativeWorkspacePath": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/README.md"
+    },
+    {
+      "errors": [
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 11,
+              "line": 42
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 42
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 7,
+              "line": 45
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 45
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 11,
+              "line": 47
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 47
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 7,
+              "line": 50
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 50
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 11,
+              "line": 52
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 52
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 7,
+              "line": 54
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 54
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 11,
+              "line": 56
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 56
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        },
+        {
+          "message": "MD031/blanks-around-fences: Fenced code blocks should be surrounded by blank lines",
+          "range": {
+            "endPosition": {
+              "column": 7,
+              "line": 60
+            },
+            "startPosition": {
+              "column": 1,
+              "line": 60
+            }
+          },
+          "severity": "DIAGNOSTIC_SEVERITY_WARNING",
+          "source": "markdownlint"
+        }
+      ],
+      "relativeWorkspacePath": "/Volumes/Data/Program/Personal/DockerCompose-V2Ray/ansible/README.md"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints"><details>
+<summary>Tool use: **read_lints**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Volumes/Data/Program/Personal/DockerCompose-V2Ray && git --no-pager diff README.md ansible/README.md</summary>
+
+```bash
+cd /Volumes/Data/Program/Personal/DockerCompose-V2Ray && git --no-pager diff README.md ansible/README.md
+```
+
+```
+diff --git a/README.md b/README.md
+index bc3733f..8401a63 100644
+--- a/README.md
++++ b/README.md
+@@ -4,11 +4,20 @@ A personal V2Ray (VMess over WebSocket) VPN server, deployed via Ansible. Nginx
+ 
+ ## Deploy
+ 
+-On a fresh Ubuntu VPS with SSH open and ports 22/80/443 reachable at the cloud firewall, pointed at by your domain:
++On a fresh Ubuntu VPS with SSH open and ports 22/80/443 reachable at the cloud firewall, pointed at by your domain.
++
++**All tooling runs on your laptop.** Ansible drives the VPS over SSH — the
++server itself needs nothing pre-installed beyond &#96;sshd&#96; and a user with
++passwordless sudo; Docker and everything else is installed by the playbook
++on first run. (See [&#96;ansible/README.md&#96;](ansible/README.md) for the long
++form, including how to point Ansible at the host.)
+ 
+ &#96;&#96;&#96;bash
+-# On laptop, one-time setup:
+-brew install ansible just                                     # or pipx install ansible-core
++# On laptop, one-time setup. Pick whichever fits your OS:
++brew install ansible just jq                                  # macOS / Linuxbrew
++sudo apt install -y ansible just jq                           # Debian/Ubuntu 24.04+
++pipx install ansible-core  # + grab &#96;just&#96; from https://just.systems and jq from your package manager
++
+ just galaxy                                                   # install ansible collections
+ cp ansible/inventory/prod.ini.example ansible/inventory/prod.ini
+ $EDITOR ansible/inventory/prod.ini                            # fill in your host
+diff --git a/ansible/README.md b/ansible/README.md
+index 128b0e6..4abdbe7 100644
+--- a/ansible/README.md
++++ b/ansible/README.md
+@@ -4,14 +4,37 @@ Provider-agnostic deploy for the VPN server. Runs from your laptop against a fre
+ 
+ ## Prerequisites
+ 
+-On your laptop:
++On your laptop, pick whichever install lane fits:
+ 
+ &#96;&#96;&#96;bash
+-brew install ansible just          # or: pipx install ansible-core &amp;&amp; brew install just
++# macOS / Linuxbrew:
++brew install ansible just jq
++
++# Debian/Ubuntu 24.04+ (older releases ship ancient Ansible; prefer pipx there):
++sudo apt install -y ansible just jq
++
++# Anywhere Python is available (works on older distros + Windows/WSL):
++pipx install ansible-core
++# then grab &#96;just&#96; from https://just.systems/ (cargo, prebuilt, or your distro)
++# and &#96;jq&#96; from your package manager
++
+ ansible-galaxy install -r ansible/requirements.yml
+ &#96;&#96;&#96;
+ 
+-On the VPS: nothing — just SSH access as a user with passwordless sudo, and ports 22/80/443 open at the cloud firewall.
++&#96;just&#96; and &#96;jq&#96; are only needed for the laptop-side helpers (&#96;just deploy&#96;,
++the Azure throwaway flow, etc.). If you'd rather drive &#96;ansible-playbook&#96;
++directly you can skip them.
++
++On the VPS: **nothing Ansible-side.** The playbook connects over SSH as a
++user with passwordless sudo and installs rootful Docker + everything else
++itself. All you need on the server is:
++
++- &#96;sshd&#96; reachable on port 22 (from your laptop).
++- A user that can &#96;sudo&#96; without a password prompt.
++- Ports 22/80/443 open at the cloud firewall (LE's HTTP-01 challenge needs 80
++  inbound during the first deploy).
++- Ubuntu 22.04 / 24.04 is what we test against; other Debian-family distros
++  should work but aren't in CI.
+ 
+ ## First-time setup
+ 
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ I'm realizing the linting issues are mostly pre-existing — the README.md problems weren't touched by my changes. But looking at the ansible/README.md fence spacing, those are actually my new additions, and the MD031 warnings about missing blank lines around code blocks seem to be flagging something within the fence structure itself rather than between separate blocks. Looking at the table and code block locations, those lint warnings are pre-existing from earlier commits, not from my current edit. I should focus on the user's actual question about install guidance rather than expanding scope to fix unrelated linting issues. Let me just commit these changes as-is.</details></think>
+
+_**Agent (claude-opus-4-7)**_
+
+Most of those lints are pre-existing in the same files. One I just touched — the `~/.ssh/config` block from the previous commit has no language tag; let me fix that while I'm here so the lint count drops.
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Volumes/Data/Program/Personal/DockerCompose-V2Ray/README.md</summary>
+
+</details>
+
+</tool-use>
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Volumes/Data/Program/Personal/DockerCompose-V2Ray && git add README.md ansible/README.md && git commit --trailer "Made-with: Cursor" -m "$(cat <<'EOF'
+README: clarify laptop vs VPS prereqs, widen install options
+
+- Top README now says up front that all tooling runs on the laptop and
+  the VPS needs nothing pre-installed beyond sshd + passwordless sudo.
+  Ansible installs Docker and the rest on first run.
+
+- Expand the one-time setup snippet with apt and pipx install lanes
+  so non-macOS / non-Homebrew users aren't stuck on `brew install`.
+
+- ansible/README.md grows a parallel prereq section: three install
+  lanes (brew / apt / pipx), a note that just+jq are only for the
+  laptop helpers, and a bullet list of the concrete server-side
+  requirements (sshd, sudoers, open ports, tested distros).
+
+- Small cleanup: tag the ~/.ssh/config snippet with `sshconfig` so
+  markdownlint stops flagging it as a language-less fence.
+EOF
+)"</summary>
+
+```bash
+cd /Volumes/Data/Program/Personal/DockerCompose-V2Ray && git add README.md ansible/README.md && git commit --trailer "Made-with: Cursor" -m "$(cat <<'EOF'
+README: clarify laptop vs VPS prereqs, widen install options
+
+- Top README now says up front that all tooling runs on the laptop and
+  the VPS needs nothing pre-installed beyond sshd + passwordless sudo.
+  Ansible installs Docker and the rest on first run.
+
+- Expand the one-time setup snippet with apt and pipx install lanes
+  so non-macOS / non-Homebrew users aren't stuck on `brew install`.
+
+- ansible/README.md grows a parallel prereq section: three install
+  lanes (brew / apt / pipx), a note that just+jq are only for the
+  laptop helpers, and a bullet list of the concrete server-side
+  requirements (sshd, sudoers, open ports, tested distros).
+
+- Small cleanup: tag the ~/.ssh/config snippet with `sshconfig` so
+  markdownlint stops flagging it as a language-less fence.
+EOF
+)"
+```
+
+```
+[WARNING] Unstaged files detected.
+[INFO] Stashing unstaged files to /Users/daviddwlee84/.cache/pre-commit/patch1776774439-72759.
+Auto-redact secrets in agent artifacts...............(no files to check)Skipped
+Detect hardcoded secrets.................................................Passed
+detect private key.......................................................Passed
+check for added large files..............................................Passed
+check for merge conflicts................................................Passed
+fix end of files.........................................................Passed
+trim trailing whitespace.................................................Passed
+check yaml...........................................(no files to check)Skipped
+check that executables have shebangs.................(no files to check)Skipped
+shellcheck...........................................(no files to check)Skipped
+[INFO] Restored changes from /Users/daviddwlee84/.cache/pre-commit/patch1776774439-72759.
+[master 6743e14] README: clarify laptop vs VPS prereqs, widen install options
+ 2 files changed, 39 insertions(+), 7 deletions(-)
+
+```
+</details>
+</tool-use>
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2**</summary>
+
+</details></tool-use>
+
+_**Agent (claude-opus-4-7)**_
+
+Done. Commit `6743e14` expands both READMEs so the split is unambiguous:
+
+**Top `README.md`**
+- Explicit callout: *"All tooling runs on your laptop."* Ansible drives the VPS over SSH; the VPS needs only `sshd` + a passwordless-sudo user. Docker is installed by the playbook on first run.
+- Three install lanes in the one-time setup block instead of the macOS-only `brew` line:
+  - `brew install ansible just jq` (macOS / Linuxbrew)
+  - `sudo apt install -y ansible just jq` (Debian/Ubuntu 24.04+)
+  - `pipx install ansible-core` (anywhere Python is available — covers older distros and Windows/WSL); `just` from https://just.systems/ and `jq` from the distro's package manager.
+
+**`ansible/README.md`**
+- Same three install lanes, plus a note that `just` and `jq` are only needed for the laptop-side helpers (`just deploy`, the Azure flow); pure `ansible-playbook` users can skip them.
+- On the VPS side, replaced the one-liner with a bullet list: reachable `sshd`, sudoers entry, ports 22/80/443 open at the cloud firewall (LE needs 80 inbound during first deploy), and "Ubuntu 22.04/24.04 is what we test against".
+
+Also tagged the `~/.ssh/config` snippet from the previous commit with `sshconfig` so markdownlint stops warning about it.
+
+Short answer to your literal question: **the VPS itself doesn't need Ansible** — that's intentional. Ansible is a push-based tool; it logs in over SSH from your laptop and `pip install`-level Python already ships with Ubuntu, which is all the target side needs. The only "install" that happens on the VPS is what `just deploy` does automatically (Docker + compose plugin + the V2Ray/Nginx stack).
+
+---
+
+_**User**_
+
+@Justfile 把setup limux/macos prerequistes 也做爲獨立的just command?
+
+---
+
+_**Agent (claude-opus-4-7)**_
+
+<think><details><summary>Thought Process</summary>
+ I'm realizing there's a circular dependency issue here — if we're using `just setup` to install `just` itself, that won't work since the user needs `just` to run the command in the first place. So the recipe should focus on installing the other prerequisites like `ansible` and `jq`, assuming `just` is already available.</details></think>

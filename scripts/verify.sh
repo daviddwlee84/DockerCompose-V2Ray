@@ -1,10 +1,63 @@
 #!/bin/bash
 # Smoke test the deployed VPN server.
 #
-# Usage: DOMAIN=your.domain.tld ./scripts/verify.sh
-#        (or source an .env that sets DOMAIN)
+# Usage:
+#   DOMAIN=your.domain.tld ./scripts/verify.sh
+#   RG=<resource-group>    ./scripts/verify.sh   # pulls DOMAIN from vms/<rg>.json
+#
+# With multiple VMs tracked under .secrets/azure/vms/, run the script once
+# per RG (or set DOMAIN manually). Example multi-VM loop:
+#   for f in .secrets/azure/vms/*.json; do
+#     [ "$(basename "$f")" = current ] && continue
+#     DOMAIN=$(jq -r .fqdn "$f") ./scripts/verify.sh || echo "  (failed: $f)"
+#   done
 
 set -euo pipefail
+
+REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+VMS_DIR="$REPO_ROOT/.secrets/azure/vms"
+LEGACY_LAST_VM="$REPO_ROOT/.secrets/azure/last-vm.json"
+
+# Allow RG=<rg> as a shortcut to populate DOMAIN from the state file.
+if [ -z "${DOMAIN:-}" ] && [ -n "${RG:-}" ]; then
+    state="$VMS_DIR/$RG.json"
+    if [ ! -f "$state" ]; then
+        echo "verify.sh: RG=$RG but $state not found" >&2
+        exit 1
+    fi
+    DOMAIN=$(jq -r '.fqdn // empty' "$state")
+    [ -n "$DOMAIN" ] || { echo "verify.sh: could not read .fqdn from $state" >&2; exit 1; }
+fi
+
+# Zero-arg convenience: if exactly one VM is tracked, use its FQDN. Refuse
+# when more than one is tracked — silent defaults are a footgun.
+if [ -z "${DOMAIN:-}" ] && [ -d "$VMS_DIR" ]; then
+    shopt -s nullglob
+    tracked=("$VMS_DIR"/*.json)
+    shopt -u nullglob
+    if [ "${#tracked[@]}" -gt 0 ]; then
+        unique_rgs=$(for f in "${tracked[@]}"; do
+            [ "$(basename "$f")" = current ] && continue
+            jq -r '.rg // empty' "$f" 2>/dev/null
+        done | sort -u)
+        count=$(printf '%s\n' "$unique_rgs" | grep -c . || true)
+        if [ "$count" = "1" ]; then
+            one=$(printf '%s\n' "$unique_rgs" | head -n 1)
+            DOMAIN=$(jq -r '.fqdn // empty' "$VMS_DIR/$one.json")
+        elif [ "$count" -gt 1 ]; then
+            echo "verify.sh: multiple VMs tracked — pass RG=<rg> or DOMAIN=<fqdn>:" >&2
+            for rg in $unique_rgs; do
+                fqdn=$(jq -r '.fqdn // empty' "$VMS_DIR/$rg.json" 2>/dev/null)
+                printf '  %s (%s)\n' "$rg" "$fqdn" >&2
+            done
+            exit 1
+        fi
+    fi
+fi
+
+if [ -z "${DOMAIN:-}" ] && [ -f "$LEGACY_LAST_VM" ]; then
+    DOMAIN=$(jq -r '.fqdn // empty' "$LEGACY_LAST_VM" 2>/dev/null || true)
+fi
 
 : "${DOMAIN:?DOMAIN must be set, e.g. DOMAIN=your-host.japaneast.cloudapp.azure.com}"
 

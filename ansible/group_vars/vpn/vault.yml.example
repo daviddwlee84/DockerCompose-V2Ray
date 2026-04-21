@@ -1,8 +1,14 @@
 ---
-# Copy to vault.yml, fill in real values, then:
-#   ansible-vault encrypt ansible/group_vars/vpn/vault.yml
-# After encryption, edits via:
-#   ansible-vault edit ansible/group_vars/vpn/vault.yml
+# SINGLE-HOST LAYOUT (this file): copy to vault.yml, fill in real values, then
+# encrypt with `ansible-vault encrypt ansible/group_vars/vpn/vault.yml`.
+# After encryption, edit via `ansible-vault edit ansible/group_vars/vpn/vault.yml`.
+#
+# MULTI-HOST LAYOUT (preferred when using the Azure throwaway flow): each VM
+# has its own encrypted vault at ansible/host_vars/<host>/vault.yml with its
+# own vault_domain / vault_v2ray_uuid. `just az-configure` writes these
+# automatically from .secrets/azure/vms/*.json. Ansible's variable
+# precedence (host_vars > group_vars) means you can leave this file empty
+# if every host has its own per-host vault.
 #
 # Vault password file: ~/.vault-pass (gitignored, chmod 600).
 
