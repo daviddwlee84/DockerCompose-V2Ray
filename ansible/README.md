@@ -4,26 +4,42 @@ Provider-agnostic deploy for the VPN server. Runs from your laptop against a fre
 
 ## Prerequisites
 
-On your laptop, pick whichever install lane fits:
+On your laptop, the short path is:
+
+```bash
+# Grab `just` first (bootstrap), then let it install the rest:
+brew install just                          # macOS / Linuxbrew
+# -- or Debian/Ubuntu 24.04+: sudo apt install -y just
+# -- or prebuilt binary: https://just.systems/
+
+just setup                                 # ansible + jq + uv + galaxy collections
+```
+
+`just setup` auto-detects Homebrew (macOS / Linuxbrew) first, falls back to
+`apt` on Debian/Ubuntu, and prints manual hints everywhere else. It is
+idempotent, so re-running only installs what is missing.
+
+Prefer to do it by hand? Any of these work:
 
 ```bash
 # macOS / Linuxbrew:
-brew install ansible just jq
+brew install ansible just jq uv
 
 # Debian/Ubuntu 24.04+ (older releases ship ancient Ansible; prefer pipx there):
 sudo apt install -y ansible just jq
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Anywhere Python is available (works on older distros + Windows/WSL):
 pipx install ansible-core
-# then grab `just` from https://just.systems/ (cargo, prebuilt, or your distro)
-# and `jq` from your package manager
+# then grab `just` from https://just.systems/, `jq` from your package manager,
+# and `uv` from https://astral.sh/uv/
 
 ansible-galaxy install -r ansible/requirements.yml
 ```
 
-`just` and `jq` are only needed for the laptop-side helpers (`just deploy`,
-the Azure throwaway flow, etc.). If you'd rather drive `ansible-playbook`
-directly you can skip them.
+`just`, `jq`, and `uv` are only needed for the laptop-side helpers
+(`just deploy`, the Azure throwaway flow, etc.). If you'd rather drive
+`ansible-playbook` directly, only Ansible itself is required.
 
 On the VPS: **nothing Ansible-side.** The playbook connects over SSH as a
 user with passwordless sudo and installs rootful Docker + everything else

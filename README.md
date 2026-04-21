@@ -13,12 +13,12 @@ on first run. (See [`ansible/README.md`](ansible/README.md) for the long
 form, including how to point Ansible at the host.)
 
 ```bash
-# On laptop, one-time setup. Pick whichever fits your OS:
-brew install ansible just jq                                  # macOS / Linuxbrew
-sudo apt install -y ansible just jq                           # Debian/Ubuntu 24.04+
-pipx install ansible-core  # + grab `just` from https://just.systems and jq from your package manager
-
-just galaxy                                                   # install ansible collections
+# On laptop, one-time setup:
+brew install just                                             # macOS / Linuxbrew
+# Debian/Ubuntu: sudo apt install -y just  (24.04+) — or grab a prebuilt binary
+#                from https://just.systems/
+just setup                                                    # installs ansible + jq + uv + ansible-galaxy collections
+                                                              # auto-detects brew / apt; falls back to manual hints.
 cp ansible/inventory/prod.ini.example ansible/inventory/prod.ini
 $EDITOR ansible/inventory/prod.ini                            # fill in your host
 cp ansible/group_vars/vpn/vault.yml.example ansible/group_vars/vpn/vault.yml
@@ -50,7 +50,7 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 | `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `rotate-uuid`, `verify`, `logs-*`, `vault-edit`. |
 | `clients/cli/` | CLI Clash client setup for Linux. |
 | `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
-| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
+| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
 | `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
 
 ## One-shot Azure validation (throwaway VM)
@@ -69,6 +69,7 @@ just az-configure     # render inventory/prod.ini + encrypted vault.yml
 just deploy           # existing ansible flow (common + docker + vpn + letsencrypt)
 DOMAIN=$(jq -r .fqdn .secrets/azure/last-vm.json) just verify
 just az-client        # emit out/client/{vmess.txt,config.json,clash.yaml,human.md,qr.png}
+just az-rotate-ip     # rotate the public IP, keep the FQDN (use when GFW-banned; see docs/IP-ROTATION.md)
 just az-down -y       # delete the RG (-y skips the type-the-name confirm)
 
 # Or the whole loop in one shot, with a pause for manual testing before teardown:

@@ -12,6 +12,63 @@ ansible_opts := env_var_or_default("ANSIBLE_OPTS", "")
 default:
     @just --list
 
+# One-time laptop setup: install ansible, jq, uv (brew/apt auto-detected) and fetch ansible-galaxy collections. Idempotent.
+setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    missing=()
+    for t in ansible jq uv; do
+        command -v "$t" >/dev/null 2>&1 || missing+=("$t")
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then
+        echo "[setup] ansible, jq, uv already on PATH — nothing to install."
+    else
+        echo "[setup] Missing: ${missing[*]}"
+        if command -v brew >/dev/null 2>&1; then
+            echo "[setup] Using Homebrew."
+            brew install "${missing[@]}"
+        elif [ -f /etc/os-release ] && grep -qiE '^ID(_LIKE)?=.*(debian|ubuntu)' /etc/os-release; then
+            echo "[setup] Using apt (Debian/Ubuntu detected)."
+            apt_pkgs=()
+            install_uv=0
+            for t in "${missing[@]}"; do
+                case "$t" in
+                    ansible|jq) apt_pkgs+=("$t") ;;
+                    uv)         install_uv=1 ;;
+                esac
+            done
+            if [ ${#apt_pkgs[@]} -gt 0 ]; then
+                sudo apt-get update
+                sudo apt-get install -y "${apt_pkgs[@]}"
+            fi
+            # uv isn't in Debian/Ubuntu apt yet; use Astral's official installer
+            # (lands in ~/.local/bin — make sure that's on PATH afterwards).
+            if [ $install_uv -eq 1 ]; then
+                echo "[setup] Installing uv via astral.sh installer..."
+                curl -LsSf https://astral.sh/uv/install.sh | sh
+            fi
+        else
+            echo "[setup] No brew or apt detected on this OS." >&2
+            echo "[setup] Install manually: ${missing[*]}" >&2
+            echo "[setup] See README.md 'Deploy' section for install options." >&2
+            exit 1
+        fi
+    fi
+
+    echo "[setup] Fetching ansible-galaxy collections..."
+    cd {{ansible_dir}} && ansible-galaxy install -r requirements.yml
+
+    if ! command -v az >/dev/null 2>&1; then
+        echo
+        echo "[setup] NOTE: for the Azure throwaway flow (just az-*), also install:"
+        echo "          brew install azure-cli     # macOS / Linuxbrew"
+        echo "          sudo apt install azure-cli # Debian/Ubuntu 24.04+"
+        echo "          https://learn.microsoft.com/cli/azure/install-azure-cli"
+    fi
+    echo "[setup] Done."
+
 # Install galaxy collections required by the playbooks.
 galaxy:
     cd {{ansible_dir}} && ansible-galaxy install -r requirements.yml
@@ -69,6 +126,10 @@ az-client *args:
 # Tear down the Azure RG tracked in last-vm.json (use `-y` to skip the prompt).
 az-down *args:
     scripts/az_down.sh {{args}}
+
+# Rotate the Azure public IP (keeps FQDN / cert / UUID). Pass <rg> or set AZ_RG; defaults to vms/current.
+az-rotate-ip *args:
+    scripts/az_rotate_ip.sh {{args}}
 
 # One-shot: provision → configure → deploy → verify → client-config → pause → teardown.
 az-cycle:
