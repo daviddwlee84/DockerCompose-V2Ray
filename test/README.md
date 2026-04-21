@@ -6,15 +6,17 @@ Local Docker "VPS" for validating Ansible connectivity and a subset of the playb
 
 - SSH reachability from the laptop to the target host (via `just test-ping`).
 - The inventory + vault + SSH-key wiring works end-to-end.
-- `apt install` tasks in the `common` and `docker` roles run to completion.
-- File/template rendering in the `vpn` role (compose.yml, nginx conf, v2ray config) produces valid files.
+- Ansible connection plugin + Python interpreter detection on the target.
 
 ## What this does NOT validate
 
-- **systemd services** — no systemd in the container. Tasks like `systemctl enable docker` will fail. Run these with `--skip-tags systemd` or skip the common/docker roles entirely when testing locally.
-- **Docker-in-Docker** — the `docker` role installs docker-ce but `dockerd` won't run without dind. The vpn/letsencrypt roles depending on `docker compose up` will therefore fail.
-- **Let's Encrypt bootstrap** — requires real DNS + port 80 reachable from LE's servers. Always skip in test mode.
-- **Actual network traffic through V2Ray** — no VMess client connected; no WebSocket negotiation.
+The test container is **Alpine** (not Ubuntu), chosen because `ports.ubuntu.com` (arm64) was flaky from the author's network. This means:
+
+- **`apt` tasks in the common/docker roles will fail here** — Alpine uses `apk`. The test harness only validates the *connectivity layer*, not Ubuntu-specific package tasks.
+- **systemd services** — no systemd in the container. `systemctl ...` tasks won't work.
+- **Docker-in-Docker** — no `dockerd`. The `vpn` and `letsencrypt` roles that run `docker compose up` won't work here.
+- **Let's Encrypt bootstrap** — requires real DNS + port 80 reachable from LE's servers.
+- **Actual network traffic through V2Ray** — no VMess client, no WebSocket negotiation.
 
 For full end-to-end validation, stand up a throwaway Ubuntu 22.04 VM on Azure/GCP/Hetzner ($5/mo, destroy after testing) and run `just deploy` against it.
 

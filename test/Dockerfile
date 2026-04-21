@@ -1,36 +1,36 @@
-# Test "VPS": Ubuntu 22.04 with SSH + passwordless-sudo ansible user.
+# Test "VPS": Alpine + SSH + passwordless-sudo ansible user.
 # Used by docker-compose.test.yml for local Ansible validation.
 #
+# Alpine chosen over Ubuntu because ports.ubuntu.com (arm64) is
+# flaky from the user's network; alpine's CDN is reliable.
+#
 # Scope of what this validates:
-#   - SSH connectivity + ansible_user setup
-#   - apt install tasks in common and docker roles
-#   - file/template tasks in the vpn role
+#   - SSH connectivity + ansible_user setup (just test-ping)
+#   - Ansible can open an SSH session and run arbitrary commands
 #
 # Not validated here:
 #   - systemd service starts (no systemd in the container)
-#   - docker-in-docker (the docker role installs docker but dockerd
-#     can't actually run here without dind)
-#   - Let's Encrypt bootstrap (requires real DNS + reachable port 80)
+#   - docker-in-docker (no dockerd)
+#   - Ubuntu-specific apt tasks in the common/docker roles
+#     (Alpine uses apk; those tasks will fail)
+#   - Let's Encrypt bootstrap (requires real DNS + port 80)
 #
-# For full end-to-end validation, deploy against a real (throwaway)
-# Ubuntu VPS. This container is for the connectivity + config-rendering
-# layer only.
+# For full end-to-end validation, deploy against a real Ubuntu VPS.
 
-FROM ubuntu:24.04
+FROM alpine:3.20
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV LANG=C.UTF-8
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
         openssh-server \
+        openssh-client \
         sudo \
         python3 \
-        python3-apt \
+        bash \
         ca-certificates \
         curl \
-    && rm -rf /var/lib/apt/lists/*
+        shadow
 
 RUN useradd -m -s /bin/bash ansible \
+    && usermod -p '*' ansible \
     && echo 'ansible ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/ansible \
     && chmod 440 /etc/sudoers.d/ansible \
     && mkdir -p /home/ansible/.ssh \
@@ -41,11 +41,10 @@ COPY ssh/id_ed25519.pub /home/ansible/.ssh/authorized_keys
 RUN chmod 600 /home/ansible/.ssh/authorized_keys \
     && chown ansible:ansible /home/ansible/.ssh/authorized_keys
 
-RUN mkdir -p /run/sshd \
-    && ssh-keygen -A \
-    && sed -i 's/#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config \
-    && sed -i 's/#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config \
-    && sed -i 's/#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+RUN ssh-keygen -A \
+    && sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config \
+    && sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D", "-e"]
