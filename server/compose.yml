@@ -1,0 +1,39 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - ./runtime/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./static/nginx/html:/usr/share/nginx/html:ro
+      - ./runtime/logs/nginx:/var/log/nginx
+      - ./runtime/certbot/conf:/etc/letsencrypt
+      - ./runtime/certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - v2ray:v2ray
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    restart: unless-stopped
+    volumes:
+      - ./runtime/certbot/conf:/etc/letsencrypt
+      - ./runtime/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  v2ray:
+    image: v2ray/official:latest
+    container_name: v2ray
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+    restart: always
+    command: v2ray -config=/etc/v2ray/config.json
+    volumes:
+      - ./runtime/v2ray:/etc/v2ray:ro
+      - ./runtime/logs/v2ray:/var/log/v2ray
+    expose:
+      - "30909"
