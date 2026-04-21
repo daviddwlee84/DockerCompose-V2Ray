@@ -51,3 +51,29 @@ vault-edit:
 # Encrypt a freshly-created vault.yml (one-time after copying from vault.yml.example).
 vault-encrypt:
     cd {{ansible_dir}} && ansible-vault encrypt group_vars/vpn/vault.yml
+
+# --- local Docker test harness ---
+
+# Generate a throwaway SSH keypair for the test container (first-time setup).
+test-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p test/ssh
+    if [ ! -f test/ssh/id_ed25519 ]; then
+        ssh-keygen -t ed25519 -N '' -f test/ssh/id_ed25519 -C 'vpn-test@local'
+        echo "Generated test/ssh/id_ed25519 (gitignored)."
+    else
+        echo "test/ssh/id_ed25519 already exists."
+    fi
+
+# Build the test image and start the SSH container (bound to 127.0.0.1:2222).
+test-up: test-setup
+    cd test && docker compose -f docker-compose.test.yml up -d --build
+
+# Ansible connectivity check against the test container.
+test-ping:
+    cd {{ansible_dir}} && ansible -i inventory/test.ini vpn -m ping
+
+# Tear down the test container.
+test-down:
+    cd test && docker compose -f docker-compose.test.yml down -v

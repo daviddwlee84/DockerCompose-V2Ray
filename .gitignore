@@ -16,6 +16,11 @@ ansible/inventory/prod.ini
 ansible/inventory/dev.ini
 ansible/inventory/*.local.*
 
+# test fixtures (local-only)
+test/ssh/id_ed25519
+test/ssh/id_ed25519.pub
+test/ssh/known_hosts
+
 # editor / OS
 .DS_Store
 .idea/

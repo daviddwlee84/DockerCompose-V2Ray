@@ -1,0 +1,10 @@
+services:
+  vpn-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vpn-test
+    ports:
+      - "127.0.0.1:2222:22"
+    stop_signal: SIGTERM
+    stop_grace_period: 5s
