@@ -4,11 +4,20 @@ A personal V2Ray (VMess over WebSocket) VPN server, deployed via Ansible. Nginx 
 
 ## Deploy
 
-On a fresh Ubuntu VPS with SSH open and ports 22/80/443 reachable at the cloud firewall, pointed at by your domain:
+On a fresh Ubuntu VPS with SSH open and ports 22/80/443 reachable at the cloud firewall, pointed at by your domain.
+
+**All tooling runs on your laptop.** Ansible drives the VPS over SSH — the
+server itself needs nothing pre-installed beyond `sshd` and a user with
+passwordless sudo; Docker and everything else is installed by the playbook
+on first run. (See [`ansible/README.md`](ansible/README.md) for the long
+form, including how to point Ansible at the host.)
 
 ```bash
-# On laptop, one-time setup:
-brew install ansible just                                     # or pipx install ansible-core
+# On laptop, one-time setup. Pick whichever fits your OS:
+brew install ansible just jq                                  # macOS / Linuxbrew
+sudo apt install -y ansible just jq                           # Debian/Ubuntu 24.04+
+pipx install ansible-core  # + grab `just` from https://just.systems and jq from your package manager
+
 just galaxy                                                   # install ansible collections
 cp ansible/inventory/prod.ini.example ansible/inventory/prod.ini
 $EDITOR ansible/inventory/prod.ini                            # fill in your host
@@ -86,7 +95,7 @@ throwaway vault password is written to `.secrets/.vault-pass` on first run
 Each `just az-up` drops the per-RG keypair under `.secrets/azure/<rg>/` and
 prints a ready-to-paste `~/.ssh/config` block for a short alias:
 
-```
+```sshconfig
 Host vpn-<rg>
     HostName vpn-xxxx.japaneast.cloudapp.azure.com
     User azureuser

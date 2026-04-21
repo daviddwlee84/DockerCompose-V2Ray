@@ -4,14 +4,37 @@ Provider-agnostic deploy for the VPN server. Runs from your laptop against a fre
 
 ## Prerequisites
 
-On your laptop:
+On your laptop, pick whichever install lane fits:
 
 ```bash
-brew install ansible just          # or: pipx install ansible-core && brew install just
+# macOS / Linuxbrew:
+brew install ansible just jq
+
+# Debian/Ubuntu 24.04+ (older releases ship ancient Ansible; prefer pipx there):
+sudo apt install -y ansible just jq
+
+# Anywhere Python is available (works on older distros + Windows/WSL):
+pipx install ansible-core
+# then grab `just` from https://just.systems/ (cargo, prebuilt, or your distro)
+# and `jq` from your package manager
+
 ansible-galaxy install -r ansible/requirements.yml
 ```
 
-On the VPS: nothing — just SSH access as a user with passwordless sudo, and ports 22/80/443 open at the cloud firewall.
+`just` and `jq` are only needed for the laptop-side helpers (`just deploy`,
+the Azure throwaway flow, etc.). If you'd rather drive `ansible-playbook`
+directly you can skip them.
+
+On the VPS: **nothing Ansible-side.** The playbook connects over SSH as a
+user with passwordless sudo and installs rootful Docker + everything else
+itself. All you need on the server is:
+
+- `sshd` reachable on port 22 (from your laptop).
+- A user that can `sudo` without a password prompt.
+- Ports 22/80/443 open at the cloud firewall (LE's HTTP-01 challenge needs 80
+  inbound during the first deploy).
+- Ubuntu 22.04 / 24.04 is what we test against; other Debian-family distros
+  should work but aren't in CI.
 
 ## First-time setup
 
