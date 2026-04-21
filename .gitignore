@@ -12,6 +12,8 @@ data/
 
 # ansible
 *.retry
+ansible/inventory/prod.ini
+ansible/inventory/dev.ini
 ansible/inventory/*.local.*
 
 # editor / OS
