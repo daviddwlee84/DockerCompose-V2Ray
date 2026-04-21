@@ -38,16 +38,23 @@
       until: acme_probe.status in [200, 404]
 
     - name: Request real certificate from Let's Encrypt
-      ansible.builtin.shell: >-
-        docker compose run --rm --entrypoint
-        "certbot certonly --webroot -w /var/www/certbot
-         {% if le_staging | int == 1 %}--staging{% endif %}
-         --email {{ letsencrypt_email }}
-         -d {{ domain }}
-         --rsa-key-size {{ le_rsa_key_size }}
-         --agree-tos --non-interactive --no-eff-email"
-        certbot
-      args:
+      # Kept on ONE line to avoid YAML folded-scalar indentation quirks (more-
+      # indented lines would be preserved as literal newlines, which breaks the
+      # quoted --entrypoint argument and docker compose parses it as empty).
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - run
+          - --rm
+          - --entrypoint
+          - >-
+            certbot certonly --webroot -w /var/www/certbot
+            {% if le_staging | int == 1 %}--staging {% endif %}
+            --email {{ letsencrypt_email }} -d {{ domain }}
+            --rsa-key-size {{ le_rsa_key_size }}
+            --agree-tos --non-interactive --no-eff-email
+          - certbot
         chdir: "{{ deploy_path }}"
       register: certbot_result
       changed_when: "'Successfully received certificate' in certbot_result.stdout or 'Certificate not yet due for renewal' in certbot_result.stdout"

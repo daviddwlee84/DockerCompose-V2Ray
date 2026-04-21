@@ -27,6 +27,11 @@
     dest: "{{ deploy_path }}/static/"
     delete: true
     recursive: true
+    # Propagate the inventory-declared private key to rsync's SSH wrapper;
+    # synchronize doesn't auto-read ansible_private_key_file when delegated
+    # to localhost. `omit` keeps the original behaviour (agent/default key)
+    # when the var isn't set.
+    private_key: "{{ ansible_private_key_file | default(ansible_ssh_private_key_file) | default(omit) }}"
   delegate_to: localhost
   become: false
 
