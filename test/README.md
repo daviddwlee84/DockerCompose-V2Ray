@@ -5,20 +5,27 @@ Local Docker "VPS" for validating Ansible connectivity and a subset of the playb
 ## What this validates
 
 - SSH reachability from the laptop to the target host (via `just test-ping`).
-- The inventory + vault + SSH-key wiring works end-to-end.
-- Ansible connection plugin + Python interpreter detection on the target.
+- Inventory + vault + SSH-key wiring end-to-end.
+- Ansible connection plugin + Python interpreter detection on Ubuntu.
+- **`apt` tasks from the `common` and `docker` roles** — package installs, cache update, timezone.
+- Jinja2 template rendering in the `vpn` role.
 
 ## What this does NOT validate
 
-The test container is **Alpine** (not Ubuntu), chosen because `ports.ubuntu.com` (arm64) was flaky from the author's network. This means:
-
-- **`apt` tasks in the common/docker roles will fail here** — Alpine uses `apk`. The test harness only validates the *connectivity layer*, not Ubuntu-specific package tasks.
-- **systemd services** — no systemd in the container. `systemctl ...` tasks won't work.
-- **Docker-in-Docker** — no `dockerd`. The `vpn` and `letsencrypt` roles that run `docker compose up` won't work here.
+- **systemd services** — no systemd in the container. `systemctl enable ...` / `systemctl start ...` tasks will fail.
+- **Docker-in-Docker** — no `dockerd` in the container. The `vpn` / `letsencrypt` roles that run `docker compose up` won't work here.
 - **Let's Encrypt bootstrap** — requires real DNS + port 80 reachable from LE's servers.
-- **Actual network traffic through V2Ray** — no VMess client, no WebSocket negotiation.
+- **Actual VMess traffic** — no client, no WebSocket handshake.
 
-For full end-to-end validation, stand up a throwaway Ubuntu 22.04 VM on Azure/GCP/Hetzner ($5/mo, destroy after testing) and run `just deploy` against it.
+For full end-to-end validation, stand up a throwaway Ubuntu 22.04/24.04 VM on Azure/GCP/Hetzner ($5/mo, destroy after) and run `just deploy` against it.
+
+## Network detail: the mirror swap
+
+The image rewrites `ports.ubuntu.com` / `archive.ubuntu.com` / `security.ubuntu.com` → `mirrors.tuna.tsinghua.edu.cn` before any `apt-get` call. This keeps the test harness **bootstrap-self-contained** — it does NOT depend on any proxy or VPN being up, which matters because this IS the VPN project.
+
+HTTP (not HTTPS) is used for the mirror. Ubuntu's base image CA bundle doesn't trust Tsinghua's cert issuer, and apt verifies package integrity via GPG signatures regardless of transport, so HTTP is safe.
+
+If Tsinghua is unreachable from your network, swap to another mirror in `Dockerfile` — `mirrors.ustc.edu.cn`, `mirror.sjtu.edu.cn`, or `mirrors.aliyun.com` are drop-in replacements (note the `ubuntu-ports` vs `ubuntu` path split for arm64 vs amd64).
 
 ## Usage
 
