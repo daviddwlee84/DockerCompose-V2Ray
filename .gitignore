@@ -15,6 +15,10 @@ data/
 ansible/inventory/prod.ini
 ansible/inventory/dev.ini
 ansible/inventory/*.local.*
+# Real vault file (lives beside vault.yml.example). Should be ansible-vault
+# encrypted, but gitignored as a defense-in-depth in case encryption is
+# skipped.
+ansible/group_vars/*/vault.yml
 
 # test fixtures (local-only)
 test/ssh/id_ed25519

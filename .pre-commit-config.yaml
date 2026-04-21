@@ -1,0 +1,72 @@
+# Pre-commit hooks for DockerCompose-V2Ray
+# See https://pre-commit.com
+#
+# Setup:
+#   brew install pre-commit gitleaks   # or: uv tool install pre-commit
+#   pre-commit install
+#
+# Manual runs:
+#   pre-commit run --all-files
+#   pre-commit run gitleaks-system --all-files
+
+repos:
+  # Auto-redact secrets in agent artifacts (specstory history + coding-agent
+  # plan dirs) BEFORE gitleaks runs. If the script rewrites any file,
+  # pre-commit reports "files were modified by this hook" and the user must
+  # `git add` + re-commit. Same UX as trailing-whitespace.
+  #
+  # Script was copied from:
+  #   ~/.local/share/chezmoi/scripts/redact_secrets.py
+  # Keep the two copies roughly in sync if the chezmoi version evolves.
+  - repo: local
+    hooks:
+      - id: redact-agent-secrets
+        name: Auto-redact secrets in agent artifacts
+        entry: ./scripts/redact_secrets.py --fix
+        language: system
+        pass_filenames: false
+        files: ^(\.specstory/history|\.claude/plans|\.cursor/plans|\.opencode/plans)/.*\.md$
+
+  # Gitleaks -- detect secrets (API keys, tokens, PEM keys). Blocks commit
+  # when a rule matches. Uses the system-installed gitleaks (brew) so we
+  # don't drag in a Go toolchain.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.22.1
+    hooks:
+      - id: gitleaks-system
+        pass_filenames: false
+
+  # Standard hygiene hooks. Narrowly scoped to avoid churn on vendored
+  # third-party content under clients/.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+        # Covers the OPENSSH / PEM / RSA key headers gitleaks's private-key
+        # rule also catches; overlap is deliberate -- two independent checks
+        # for the highest-risk leak type.
+        exclude: ^(clients/|legacy/|test/ssh/)
+      - id: check-added-large-files
+        args: ['--maxkb=2048']
+        exclude: ^(clients/|legacy/)
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+        exclude: ^(\.specstory/|clients/|legacy/)
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^(\.specstory/|clients/|legacy/)
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        # Ansible Jinja2-in-YAML templates (.j2) are not valid YAML.
+        exclude: (\.j2$|^clients/|^legacy/)
+      - id: check-executables-have-shebangs
+        exclude: ^(clients/|legacy/)
+
+  # shellcheck -- static analysis for the two top-level shell scripts.
+  # Scoped narrowly; expand if more land under scripts/.
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        files: '^scripts/[^/]+\.sh$'
+        args: [--shell=bash, --severity=warning]
