@@ -13,9 +13,11 @@ set -euo pipefail
 
 OUT_FILE=".secrets/azure/last-vm.json"
 YES=0
+KEEP_KEYS=0
 for arg in "$@"; do
     case "$arg" in
         -y|--yes) YES=1 ;;
+        --keep-keys) KEEP_KEYS=1 ;;
         -h|--help)
             sed -n '2,10p' "$0"
             exit 0
@@ -29,9 +31,15 @@ die() { printf '[az-down] ERROR: %s\n' "$*" >&2; exit 1; }
 
 command -v az >/dev/null || die "az CLI not found on PATH"
 
+SSH_KEY_DIR=""
 if [ -z "${AZ_RG:-}" ]; then
     [ -f "$OUT_FILE" ] || die "$OUT_FILE not found — pass AZ_RG=<rg> explicitly"
-    AZ_RG=$(awk -F'"' '/"rg"/{print $4; exit}' "$OUT_FILE")
+    if command -v jq >/dev/null 2>&1; then
+        AZ_RG=$(jq -r '.rg // empty' "$OUT_FILE")
+        SSH_KEY_DIR=$(jq -r '.ssh_key_dir // empty' "$OUT_FILE")
+    else
+        AZ_RG=$(awk -F'"' '/"rg"/{print $4; exit}' "$OUT_FILE")
+    fi
     [ -n "$AZ_RG" ] || die "failed to parse 'rg' from $OUT_FILE"
 fi
 
@@ -56,5 +64,14 @@ log "Deleting (--no-wait; Azure will reap in the background)..."
 az group delete --name "$AZ_RG" --yes --no-wait
 
 rm -f "$OUT_FILE"
-log "Cleared $OUT_FILE. Done."
-log "Check status with: az group show --name $AZ_RG"
+log "Cleared $OUT_FILE."
+
+# Reap the per-RG SSH key dir too (az_up.sh auto-generates one unless the
+# caller set AZ_SSH_PUBKEY; that dir is bound to the VM we just deleted).
+# Pass --keep-keys to preserve it for forensics / reconnect after a failure.
+if [ $KEEP_KEYS -ne 1 ] && [ -n "$SSH_KEY_DIR" ] && [ -d "$SSH_KEY_DIR" ]; then
+    log "Removing per-RG SSH key dir $SSH_KEY_DIR (pass --keep-keys to preserve)"
+    rm -rf "$SSH_KEY_DIR"
+fi
+
+log "Done. Check status with: az group show --name $AZ_RG"

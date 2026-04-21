@@ -6,8 +6,8 @@
       "start_timestamp": "2026-04-21T04:22:36.545Z",
       "end_timestamp": "2026-04-21T04:22:36.543Z",
       "markdown_size_bytes": 643613,
-      "provider": "claude-code",
-      "last_updated": "2026-04-21T11:33:21Z"
+      "provider": "claude",
+      "last_updated": "2026-04-21T12:20:56Z"
     },
     "54c3b42d-5410-45e5-9bb7-1ad4af9d90c9": {
       "user_message_count": 3,

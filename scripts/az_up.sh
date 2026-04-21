@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 # Provision a throwaway Azure VM for end-to-end validation of the V2Ray deploy.
 #
-# Requires: az CLI (already logged in, `az account show` should work).
+# Requires: az CLI (already logged in, `az account show` should work), jq,
+# curl (for the live-pricing lookup; silently skipped if unavailable).
 # Writes:   .secrets/azure/last-vm.json with everything the rest of the flow needs.
 #
 # All inputs are env vars with sensible defaults. Override any of them inline:
 #   AZ_LOCATION=eastasia AZ_VM_SIZE=Standard_B1s scripts/az_up.sh
 #
-# Safe to re-run as long as AZ_RG is distinct — `az group list -o table` shows leaks.
+# Non-obvious env vars:
+#   AZ_SSH_PUBKEY    Reuse an existing pubkey instead of minting a fresh one.
+#                    Default: generate a per-RG ed25519 keypair under
+#                    .secrets/azure/<rg>/id_ed25519(.pub). az_down.sh removes
+#                    the directory on teardown.
+#   AZ_SHUTDOWN_TIME Daily auto-shutdown time in UTC HHMM (Azure DevTest Labs
+#                    schedule). Default: 1800 (= 02:00 Asia/Shanghai, 03:00
+#                    Asia/Tokyo). Set to 'off' to disable.
+#   AZ_YES           Skip the "estimated cost, proceed?" confirm prompt.
+#   AZ_OVERWRITE     Clobber an existing last-vm.json (orphans the prior VM).
 
 set -euo pipefail
 
@@ -20,19 +30,7 @@ set -euo pipefail
 # az CLI 2.85 (ERROR: Extra data: line 1 column 4). Stick to the URN.
 : "${AZ_IMAGE:=Canonical:ubuntu-24_04-lts:server:latest}"
 : "${AZ_ADMIN_USER:=azureuser}"
-# If no SSH pubkey is configured, auto-generate a throwaway ed25519 keypair
-# under .secrets/azure/ so the flow works on fresh machines with no ~/.ssh/id_ed25519.
-if [ -z "${AZ_SSH_PUBKEY:-}" ]; then
-    if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
-        AZ_SSH_PUBKEY="$HOME/.ssh/id_ed25519.pub"
-    else
-        mkdir -p ".secrets/azure"
-        if [ ! -f ".secrets/azure/id_ed25519" ]; then
-            ssh-keygen -t ed25519 -N '' -f ".secrets/azure/id_ed25519" -C "vpn-az-throwaway" >/dev/null
-        fi
-        AZ_SSH_PUBKEY="$PWD/.secrets/azure/id_ed25519.pub"
-    fi
-fi
+: "${AZ_SHUTDOWN_TIME:=off}"
 
 # Generated defaults (only if caller didn't pre-set them).
 if [ -z "${AZ_RG:-}" ]; then
@@ -44,6 +42,7 @@ fi
 
 OUT_DIR=".secrets/azure"
 OUT_FILE="$OUT_DIR/last-vm.json"
+KEY_DIR="$OUT_DIR/$AZ_RG"
 
 # --- preflight -------------------------------------------------------------
 
@@ -55,7 +54,27 @@ command -v jq >/dev/null || die "jq not found on PATH (brew install jq)"
 
 az account show >/dev/null 2>&1 || die "az CLI not logged in — run 'az login' first"
 
-[ -f "$AZ_SSH_PUBKEY" ] || die "SSH pubkey not found: $AZ_SSH_PUBKEY (generate one with ssh-keygen -t ed25519)"
+# SSH key selection:
+#   - If AZ_SSH_PUBKEY is set, honour it verbatim (user wants to reuse a key).
+#   - Otherwise mint a fresh per-RG keypair under .secrets/azure/<rg>/.
+#     Keeping the key isolated per throwaway VM means a leak on one probe
+#     can't be replayed against another, and az_down.sh can safely wipe it.
+if [ -n "${AZ_SSH_PUBKEY:-}" ]; then
+    [ -f "$AZ_SSH_PUBKEY" ] || die "AZ_SSH_PUBKEY points at $AZ_SSH_PUBKEY, which does not exist"
+    log "Using caller-supplied SSH pubkey: $AZ_SSH_PUBKEY"
+    SSH_KEY_AUTO_GENERATED=0
+else
+    mkdir -p "$KEY_DIR"
+    chmod 700 "$KEY_DIR"
+    if [ ! -f "$KEY_DIR/id_ed25519" ]; then
+        log "Generating fresh ed25519 keypair under $KEY_DIR/ ..."
+        ssh-keygen -t ed25519 -N '' -f "$KEY_DIR/id_ed25519" -C "vpn-$AZ_RG" >/dev/null
+    else
+        log "Reusing existing keypair under $KEY_DIR/ (delete that dir to regenerate)"
+    fi
+    AZ_SSH_PUBKEY="$PWD/$KEY_DIR/id_ed25519.pub"
+    SSH_KEY_AUTO_GENERATED=1
+fi
 
 # Guard against stale state: if last-vm.json already exists, refuse unless
 # caller explicitly asked to overwrite. Prevents accidentally orphaning a VM.
@@ -63,13 +82,59 @@ if [ -f "$OUT_FILE" ] && [ "${AZ_OVERWRITE:-0}" != "1" ]; then
     die "$OUT_FILE already exists. Run 'just az-down' first, or set AZ_OVERWRITE=1 to clobber (this will ORPHAN the previously-tracked VM)."
 fi
 
-# --- provision -------------------------------------------------------------
+# --- cost preview + confirm ------------------------------------------------
 
-log "Using subscription: $(az account show --query name -o tsv)"
+# Best-effort query of the Azure Retail Prices API for the target (location,
+# sku). No auth required. Falls through silently on timeout / parse error;
+# we still link the user at the portal pricing page in that case.
+estimate_price_per_hour() {
+    local location="$1" sku="$2" json url
+    url="https://prices.azure.com/api/retail/prices?\$filter=armRegionName%20eq%20'${location}'%20and%20armSkuName%20eq%20'${sku}'%20and%20priceType%20eq%20'Consumption'%20and%20serviceName%20eq%20'Virtual%20Machines'"
+    command -v curl >/dev/null || return 1
+    json=$(curl -fsS --max-time 5 "$url" 2>/dev/null) || return 1
+    # Cheapest Linux consumption price — reject Windows, Spot, and Low Priority.
+    echo "$json" | jq -er '
+        [ .Items[]
+          | select((.productName // "") | test("Windows") | not)
+          | select((.skuName // "") | test("Spot"; "i") | not)
+          | select((.skuName // "") | test("Low Priority"; "i") | not)
+          | .retailPrice
+        ] | min
+    ' 2>/dev/null
+}
+
+log "Subscription:       $(az account show --query name -o tsv)"
 log "Resource group:     $AZ_RG ($AZ_LOCATION)"
 log "VM:                 $AZ_VM_NAME ($AZ_VM_SIZE, $AZ_IMAGE)"
 log "DNS prefix:         $AZ_DNS_PREFIX"
 log "SSH pubkey:         $AZ_SSH_PUBKEY"
+if [ "$AZ_SHUTDOWN_TIME" = "off" ]; then
+    log "Auto-shutdown:      DISABLED (AZ_SHUTDOWN_TIME=off)"
+else
+    log "Auto-shutdown:      ${AZ_SHUTDOWN_TIME} UTC daily (set AZ_SHUTDOWN_TIME=off to disable)"
+fi
+
+log "Looking up retail pricing for $AZ_VM_SIZE in $AZ_LOCATION ..."
+if price=$(estimate_price_per_hour "$AZ_LOCATION" "$AZ_VM_SIZE") && [ "$price" != "null" ] && [ -n "$price" ]; then
+    daily=$(awk -v p="$price" 'BEGIN{printf "%.2f", p*24}')
+    monthly=$(awk -v p="$price" 'BEGIN{printf "%.2f", p*730}')
+    log "Estimated compute:  \$${price}/hour  (~\$${daily}/day, ~\$${monthly}/month, Linux PAYG)"
+    log "(Plus ~\$3/mo for the Standard public IP and ~\$0.005/GB egress.)"
+else
+    log "Could not fetch live pricing — see:"
+    log "  https://azure.microsoft.com/pricing/details/virtual-machines/linux/"
+fi
+
+if [ "${AZ_YES:-0}" != "1" ]; then
+    printf '[az-up] Proceed with provisioning? [y/N]: ' >&2
+    read -r confirm
+    case "$confirm" in
+        y|Y|yes|YES) ;;
+        *) die "aborted by user" ;;
+    esac
+fi
+
+# --- provision -------------------------------------------------------------
 
 log "Creating resource group..."
 az group create --name "$AZ_RG" --location "$AZ_LOCATION" --output none
@@ -119,6 +184,16 @@ az vm open-port --resource-group "$AZ_RG" --name "$AZ_VM_NAME" \
 az vm open-port --resource-group "$AZ_RG" --name "$AZ_VM_NAME" \
     --port 443 --priority 320 --output none
 
+# Safety net for forgotten VMs. Uses the built-in DevTest Labs auto-shutdown
+# schedule, so it keeps running even if az_down.sh never gets called.
+if [ "$AZ_SHUTDOWN_TIME" != "off" ]; then
+    log "Configuring auto-shutdown at ${AZ_SHUTDOWN_TIME} UTC daily..."
+    if ! az vm auto-shutdown --resource-group "$AZ_RG" --name "$AZ_VM_NAME" \
+            --time "$AZ_SHUTDOWN_TIME" --output none 2>/dev/null; then
+        log "(warning: auto-shutdown setup failed — set AZ_SHUTDOWN_TIME=off to silence)"
+    fi
+fi
+
 # --- wait for SSH ----------------------------------------------------------
 
 log "Waiting for SSH on $FQDN ..."
@@ -151,10 +226,34 @@ jq -n \
     --arg public_ip "$PUBLIC_IP" \
     --arg admin_user "$AZ_ADMIN_USER" \
     --arg ssh_key "$SSH_KEY" \
+    --arg ssh_key_dir "$([ "$SSH_KEY_AUTO_GENERATED" = "1" ] && printf '%s' "$KEY_DIR" || printf '')" \
+    --arg shutdown_time "$AZ_SHUTDOWN_TIME" \
     --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{rg:$rg, vm:$vm, location:$location, fqdn:$fqdn, public_ip:$public_ip, admin_user:$admin_user, ssh_key:$ssh_key, created_at:$created_at}' \
+    '{rg:$rg, vm:$vm, location:$location, fqdn:$fqdn, public_ip:$public_ip,
+      admin_user:$admin_user, ssh_key:$ssh_key, ssh_key_dir:$ssh_key_dir,
+      shutdown_time:$shutdown_time, created_at:$created_at}' \
     > "$OUT_FILE"
 
 log "Wrote $OUT_FILE:"
 cat "$OUT_FILE" >&2
+
+# --- hint: ~/.ssh/config snippet ------------------------------------------
+
+if [ "$SSH_KEY_AUTO_GENERATED" = "1" ]; then
+    cat >&2 <<EOF
+
+[az-up] Tip — drop this into ~/.ssh/config for a short SSH alias:
+
+    Host $AZ_VM_NAME-$AZ_RG
+        HostName $FQDN
+        User $AZ_ADMIN_USER
+        IdentityFile $SSH_KEY
+        IdentitiesOnly yes
+        UserKnownHostsFile $PWD/$OUT_DIR/known_hosts
+        StrictHostKeyChecking accept-new
+
+Then: ssh $AZ_VM_NAME-$AZ_RG
+EOF
+fi
+
 log "Done. Next: just az-configure"

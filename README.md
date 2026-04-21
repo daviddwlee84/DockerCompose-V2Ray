@@ -52,25 +52,53 @@ and tear it down afterwards, the helpers under [`scripts/`](scripts/) wrap the
 
 ```bash
 # Prereqs on the laptop: az cli (logged in), jq, uv, ansible, just.
-# No ~/.ssh/id_ed25519? scripts/az_up.sh will mint a throwaway one under .secrets/.
+# az_up.sh mints a fresh per-RG ed25519 keypair under .secrets/azure/<rg>/
+# on every run; pass AZ_SSH_PUBKEY=... to reuse one you already trust.
 
-just az-up            # create RG + B2ats_v2 VM + NSG (22/80/443) + DNS name
+just az-up            # preview cost, create RG + B2ats_v2 VM + NSG (22/80/443) + DNS
 just az-configure     # render inventory/prod.ini + encrypted vault.yml
 just deploy           # existing ansible flow (common + docker + vpn + letsencrypt)
 DOMAIN=$(jq -r .fqdn .secrets/azure/last-vm.json) just verify
 just az-client        # emit out/client/{vmess.txt,config.json,clash.yaml,human.md,qr.png}
-just az-down          # delete the RG (prompts for the name; -y skips)
+just az-down -y       # delete the RG (-y skips the type-the-name confirm)
 
 # Or the whole loop in one shot, with a pause for manual testing before teardown:
-just az-cycle
+AZ_YES=1 just az-cycle
 ```
 
-Overrides (env vars read by `scripts/az_up.sh`): `AZ_LOCATION`, `AZ_VM_SIZE`,
-`AZ_VM_NAME`, `AZ_DNS_PREFIX`, `AZ_SSH_PUBKEY`, `AZ_RG`, `AZ_IMAGE`,
-`AZ_ADMIN_USER`. LE email falls back to `git config user.email` — set
-`LE_EMAIL=you@example.org` to override. A throwaway vault password is written
-to `.secrets/.vault-pass` on first run (gitignored). `out/client/` is also
-gitignored; the files inside are `chmod 600`.
+`scripts/az_up.sh` queries the Azure Retail Prices API and shows an
+hourly / daily / monthly estimate for the target (region, VM size) before
+prompting; set `AZ_YES=1` to skip the confirm prompt. It also configures a
+DevTest-Labs daily auto-shutdown at `AZ_SHUTDOWN_TIME` (default `1800` UTC ≈
+02:00 Asia/Shanghai) as a safety net for forgotten VMs — set
+`AZ_SHUTDOWN_TIME=off` to disable.
+
+Other overrides (all env vars read by `scripts/az_up.sh`): `AZ_LOCATION`,
+`AZ_VM_SIZE`, `AZ_VM_NAME`, `AZ_DNS_PREFIX`, `AZ_SSH_PUBKEY`, `AZ_RG`,
+`AZ_IMAGE`, `AZ_ADMIN_USER`, `AZ_OVERWRITE`. Let's Encrypt email falls back
+to `git config user.email` — set `LE_EMAIL=you@example.org` to override. A
+throwaway vault password is written to `.secrets/.vault-pass` on first run
+(gitignored). `out/client/` is also gitignored; the files inside are
+`chmod 600`.
+
+### SSH key and `~/.ssh/config`
+
+Each `just az-up` drops the per-RG keypair under `.secrets/azure/<rg>/` and
+prints a ready-to-paste `~/.ssh/config` block for a short alias:
+
+```
+Host vpn-<rg>
+    HostName vpn-xxxx.japaneast.cloudapp.azure.com
+    User azureuser
+    IdentityFile /abs/path/.secrets/azure/<rg>/id_ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /abs/path/.secrets/azure/known_hosts
+    StrictHostKeyChecking accept-new
+```
+
+`just az-down` removes that directory along with the resource group. Pass
+`just az-down -y --keep-keys` to preserve it (e.g. to reconnect to a VM that
+failed to provision cleanly but is still reachable).
 
 ## Client setup
 

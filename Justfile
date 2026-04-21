@@ -55,20 +55,20 @@ vault-encrypt:
 # --- Azure throwaway validation ---
 
 # Provision a cheap Azure VM + DNS name (writes .secrets/azure/last-vm.json).
-az-up:
-    scripts/az_up.sh
+az-up *args:
+    scripts/az_up.sh {{args}}
 
 # Render ansible inventory + vault from last-vm.json (uses git email for LE).
-az-configure:
-    scripts/az_configure.py
+az-configure *args:
+    scripts/az_configure.py {{args}}
 
 # Generate client configs (vmess://, JSON, Clash YAML, human md, PNG + ASCII QR).
-az-client:
-    scripts/vmess_client.py
+az-client *args:
+    scripts/vmess_client.py {{args}}
 
-# Tear down the Azure RG tracked in last-vm.json.
-az-down:
-    scripts/az_down.sh
+# Tear down the Azure RG tracked in last-vm.json (use `-y` to skip the prompt).
+az-down *args:
+    scripts/az_down.sh {{args}}
 
 # One-shot: provision → configure → deploy → verify → client-config → pause → teardown.
 az-cycle:
