@@ -1,0 +1,8 @@
+; Copy to prod.ini and fill in your VPS details.
+; prod.ini is gitignored (see ansible/inventory/*.local.* pattern in root .gitignore).
+
+[vpn]
+; tokyo ansible_host=20.1.2.3 ansible_user=azureuser
+
+[vpn:vars]
+; Override group_vars/vpn/vars.yml here if needed per host.

@@ -1,0 +1,14 @@
+---
+# Non-secret defaults. Override per host/group as needed.
+
+tz: Asia/Shanghai
+deploy_path: /opt/vpn
+v2ray_ws_path: /v2ray
+v2ray_internal_port: 30909
+ssh_port: 22
+
+# Firewall ports opened by the common role.
+firewall_allowed_tcp:
+  - "{{ ssh_port }}"
+  - 80
+  - 443

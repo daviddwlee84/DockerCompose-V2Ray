@@ -1,0 +1,73 @@
+---
+- name: Ensure certbot TLS options file is present
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf
+    dest: "{{ deploy_path }}/runtime/certbot/conf/options-ssl-nginx.conf"
+    mode: "0644"
+    force: false
+
+- name: Ensure DH parameters file is present
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem
+    dest: "{{ deploy_path }}/runtime/certbot/conf/ssl-dhparams.pem"
+    mode: "0644"
+    force: false
+
+- name: Check if real cert exists
+  ansible.builtin.stat:
+    path: "{{ deploy_path }}/runtime/certbot/conf/live/{{ domain }}/fullchain.pem"
+  register: le_real_cert
+
+- name: Bootstrap Let's Encrypt certificate
+  when: not le_real_cert.stat.exists
+  block:
+    - name: Start nginx with ACME-only config
+      community.docker.docker_compose_v2:
+        project_src: "{{ deploy_path }}"
+        services:
+          - nginx
+        state: present
+
+    - name: Wait for nginx to respond on ACME path
+      ansible.builtin.uri:
+        url: "http://{{ domain }}/.well-known/acme-challenge/healthcheck"
+        status_code: [200, 404]
+      register: acme_probe
+      retries: 15
+      delay: 3
+      until: acme_probe.status in [200, 404]
+
+    - name: Request real certificate from Let's Encrypt
+      ansible.builtin.shell: >-
+        docker compose run --rm --entrypoint
+        "certbot certonly --webroot -w /var/www/certbot
+         {% if le_staging | int == 1 %}--staging{% endif %}
+         --email {{ letsencrypt_email }}
+         -d {{ domain }}
+         --rsa-key-size {{ le_rsa_key_size }}
+         --agree-tos --non-interactive --no-eff-email"
+        certbot
+      args:
+        chdir: "{{ deploy_path }}"
+      register: certbot_result
+      changed_when: "'Successfully received certificate' in certbot_result.stdout or 'Certificate not yet due for renewal' in certbot_result.stdout"
+
+    - name: Render full nginx config now that cert exists
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/vpn/templates/nginx/v2ray.conf.j2"
+        dest: "{{ deploy_path }}/runtime/nginx/conf.d/v2ray.conf"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+- name: Bring up full compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_path }}"
+    state: present
+
+- name: Reload nginx after bootstrap
+  ansible.builtin.shell: docker compose exec -T nginx nginx -s reload
+  args:
+    chdir: "{{ deploy_path }}"
+  when: not le_real_cert.stat.exists
+  changed_when: true

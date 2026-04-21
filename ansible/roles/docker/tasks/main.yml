@@ -1,0 +1,44 @@
+---
+- name: Check for existing Docker install
+  ansible.builtin.command: docker --version
+  register: docker_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Docker via get.docker.com
+  when: docker_version_check.rc != 0
+  block:
+    - name: Download Docker install script
+      ansible.builtin.get_url:
+        url: https://get.docker.com
+        dest: /tmp/get-docker.sh
+        mode: "0755"
+
+    - name: Run Docker install script
+      ansible.builtin.command: /bin/sh /tmp/get-docker.sh
+      register: docker_install
+      changed_when: "'already the newest version' not in docker_install.stdout"
+
+    - name: Remove install script
+      ansible.builtin.file:
+        path: /tmp/get-docker.sh
+        state: absent
+
+- name: Add users to docker group
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"
+
+- name: Enable and start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Install Python Docker SDK (required for community.docker modules)
+  ansible.builtin.apt:
+    name:
+      - python3-docker
+    state: present

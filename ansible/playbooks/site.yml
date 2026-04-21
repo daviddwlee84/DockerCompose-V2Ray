@@ -1,0 +1,10 @@
+---
+- name: Full deploy — OS hardening, Docker, VPN stack, Let's Encrypt
+  hosts: vpn
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - docker
+    - vpn
+    - letsencrypt

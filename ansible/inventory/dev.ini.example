@@ -1,0 +1,7 @@
+; Copy to dev.ini for a staging/throwaway host.
+
+[vpn]
+; dev-vpn ansible_host=10.0.0.5 ansible_user=ubuntu
+
+[vpn:vars]
+; domain=dev.example.com

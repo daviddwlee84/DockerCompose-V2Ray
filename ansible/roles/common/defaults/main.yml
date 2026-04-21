@@ -1,0 +1,11 @@
+---
+common_apt_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - vim
+  - tmux
+  - ufw
+  - fail2ban
+  - unattended-upgrades

@@ -1,0 +1,2 @@
+---
+vpn_static_src: "{{ playbook_dir }}/../../server/static"

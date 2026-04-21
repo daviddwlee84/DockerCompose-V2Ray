@@ -1,0 +1,14 @@
+{# HTTP-only nginx config used during Let's Encrypt bootstrap.
+   Once the real cert exists, v2ray.conf.j2 replaces this. #}
+server {
+    listen 80;
+    server_name {{ domain }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}

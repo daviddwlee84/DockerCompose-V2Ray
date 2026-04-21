@@ -1,0 +1,10 @@
+---
+# App-only redeploy. Skips OS hardening and Docker install.
+# Use after editing configs/templates/vault values.
+
+- name: Redeploy VPN service (config only)
+  hosts: vpn
+  become: true
+  gather_facts: true
+  roles:
+    - vpn

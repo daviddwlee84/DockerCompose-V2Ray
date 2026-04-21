@@ -1,0 +1,73 @@
+---
+# Renders templates and syncs compose.yml + static assets into {{ deploy_path }}
+# on the VPS. Does NOT bring up compose — the letsencrypt role does that after
+# ensuring a cert exists.
+
+- name: Create deploy directory tree
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  loop:
+    - "{{ deploy_path }}"
+    - "{{ deploy_path }}/static"
+    - "{{ deploy_path }}/runtime"
+    - "{{ deploy_path }}/runtime/nginx/conf.d"
+    - "{{ deploy_path }}/runtime/v2ray"
+    - "{{ deploy_path }}/runtime/certbot/conf"
+    - "{{ deploy_path }}/runtime/certbot/www"
+    - "{{ deploy_path }}/runtime/logs/nginx"
+    - "{{ deploy_path }}/runtime/logs/v2ray"
+
+- name: Sync static assets (nginx landing page)
+  ansible.posix.synchronize:
+    src: "{{ vpn_static_src }}/"
+    dest: "{{ deploy_path }}/static/"
+    delete: true
+    recursive: true
+  delegate_to: localhost
+  become: false
+
+- name: Render compose.yml
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ deploy_path }}/compose.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: recreate stack
+
+- name: Render V2Ray config
+  ansible.builtin.template:
+    src: v2ray/config.json.j2
+    dest: "{{ deploy_path }}/runtime/v2ray/config.json"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0640"
+  notify: restart v2ray
+
+- name: Check if Let's Encrypt cert already exists
+  ansible.builtin.stat:
+    path: "{{ deploy_path }}/runtime/certbot/conf/live/{{ domain }}/fullchain.pem"
+  register: le_cert
+
+- name: Render full nginx config (cert present)
+  when: le_cert.stat.exists
+  ansible.builtin.template:
+    src: nginx/v2ray.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/v2ray.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: reload nginx
+
+- name: Render ACME-only nginx config (first-run bootstrap)
+  when: not le_cert.stat.exists
+  ansible.builtin.template:
+    src: nginx/acme-only.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/v2ray.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"

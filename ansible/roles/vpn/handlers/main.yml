@@ -1,0 +1,19 @@
+---
+- name: Reload nginx
+  community.docker.docker_container_exec:
+    container: nginx
+    command: nginx -s reload
+  listen: reload nginx
+
+- name: Restart v2ray
+  community.docker.docker_container:
+    name: v2ray
+    state: started
+    restart: true
+  listen: restart v2ray
+
+- name: Recreate compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_path }}"
+    state: present
+  listen: recreate stack

@@ -1,0 +1,32 @@
+---
+# Rotate the V2Ray UUID.
+#
+# Usage:
+#   ansible-playbook playbooks/rotate-uuid.yml -e new_uuid=$(uuidgen)
+#
+# This playbook does NOT edit the encrypted vault for you — that must
+# be done explicitly so you can confirm the change. It generates a new
+# UUID on the server and reports back; you then update the vault with:
+#   ansible-vault edit ansible/group_vars/vpn/vault.yml
+# and replace vault_v2ray_uuid with the new value, then run this
+# playbook without -e new_uuid to redeploy with the vault value.
+
+- name: Rotate V2Ray UUID
+  hosts: vpn
+  become: true
+  gather_facts: true
+  vars:
+    effective_uuid: "{{ new_uuid | default(v2ray_uuid) }}"
+  pre_tasks:
+    - name: Show effective UUID
+      ansible.builtin.debug:
+        msg: >-
+          Deploying with UUID {{ effective_uuid }}.
+          {% if new_uuid is defined %}
+          Remember to update vault_v2ray_uuid in
+          ansible/group_vars/vpn/vault.yml to match.
+          {% endif %}
+  roles:
+    - role: vpn
+      vars:
+        v2ray_uuid: "{{ effective_uuid }}"

@@ -1,0 +1,9 @@
+---
+# Non-secret per-group values. Secrets with the same semantic names live
+# in vault.yml and are referenced here via vault_* indirection so that
+# templates can use plain names (domain, v2ray_uuid, etc.) without
+# knowing whether they came from the vault.
+
+domain: "{{ vault_domain }}"
+letsencrypt_email: "{{ vault_letsencrypt_email }}"
+v2ray_uuid: "{{ vault_v2ray_uuid }}"
