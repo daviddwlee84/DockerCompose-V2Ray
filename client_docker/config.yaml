@@ -47,7 +47,7 @@ proxies:
     type: vmess
     server: your-dns-name.japaneast.cloudapp.azure.com
     port: 443
-    uuid: bae399d4-13a4-46a3-b144-4af2c0004c2e
+    uuid: your-v2ray-uuid
     alterId: 64
     cipher: auto
     udp: false
@@ -62,7 +62,7 @@ proxies:
     type: vmess
     server: your-ip-address
     port: 80
-    uuid: bae399d4-13a4-46a3-b144-4af2c0004c2e
+    uuid: your-v2ray-uuid
     alterId: 64
     cipher: auto
     udp: false
