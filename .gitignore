@@ -20,6 +20,10 @@ ansible/inventory/*.local.*
 # skipped.
 ansible/group_vars/*/vault.yml
 
+# azure-validation helpers: throwaway secrets + generated client configs
+.secrets/
+out/
+
 # test fixtures (local-only)
 test/ssh/id_ed25519
 test/ssh/id_ed25519.pub

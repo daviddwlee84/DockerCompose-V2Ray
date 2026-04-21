@@ -52,6 +52,40 @@ vault-edit:
 vault-encrypt:
     cd {{ansible_dir}} && ansible-vault encrypt group_vars/vpn/vault.yml
 
+# --- Azure throwaway validation ---
+
+# Provision a cheap Azure VM + DNS name (writes .secrets/azure/last-vm.json).
+az-up:
+    scripts/az_up.sh
+
+# Render ansible inventory + vault from last-vm.json (uses git email for LE).
+az-configure:
+    scripts/az_configure.py
+
+# Generate client configs (vmess://, JSON, Clash YAML, human md, PNG + ASCII QR).
+az-client:
+    scripts/vmess_client.py
+
+# Tear down the Azure RG tracked in last-vm.json.
+az-down:
+    scripts/az_down.sh
+
+# One-shot: provision → configure → deploy → verify → client-config → pause → teardown.
+az-cycle:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    scripts/az_up.sh
+    scripts/az_configure.py
+    # Vault password file is now at .secrets/.vault-pass (or wherever resolve_vault_pass_file() decided).
+    export ANSIBLE_VAULT_PASSWORD_FILE="${ANSIBLE_VAULT_PASSWORD_FILE:-$PWD/.secrets/.vault-pass}"
+    just deploy
+    DOMAIN=$(jq -r .fqdn .secrets/azure/last-vm.json) just verify
+    scripts/vmess_client.py
+    echo
+    echo "[az-cycle] VM is live. Test the client config, then press Enter to tear down."
+    read -r _
+    scripts/az_down.sh -y
+
 # --- local Docker test harness ---
 
 # Generate a throwaway SSH keypair for the test container (first-time setup).

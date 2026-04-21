@@ -44,6 +44,34 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 | `docs/` | `FlowCharts.md` (Clash routing), `XrayUI.md` (alt admin panels), `LEGACY.md` (pre-refactor flow). |
 | `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
 
+## One-shot Azure validation (throwaway VM)
+
+If you just want to sanity-check the whole pipeline on a fresh Japan East VM
+and tear it down afterwards, the helpers under [`scripts/`](scripts/) wrap the
+`az` CLI around the existing Ansible deploy:
+
+```bash
+# Prereqs on the laptop: az cli (logged in), jq, uv, ansible, just.
+# No ~/.ssh/id_ed25519? scripts/az_up.sh will mint a throwaway one under .secrets/.
+
+just az-up            # create RG + B2ats_v2 VM + NSG (22/80/443) + DNS name
+just az-configure     # render inventory/prod.ini + encrypted vault.yml
+just deploy           # existing ansible flow (common + docker + vpn + letsencrypt)
+DOMAIN=$(jq -r .fqdn .secrets/azure/last-vm.json) just verify
+just az-client        # emit out/client/{vmess.txt,config.json,clash.yaml,human.md,qr.png}
+just az-down          # delete the RG (prompts for the name; -y skips)
+
+# Or the whole loop in one shot, with a pause for manual testing before teardown:
+just az-cycle
+```
+
+Overrides (env vars read by `scripts/az_up.sh`): `AZ_LOCATION`, `AZ_VM_SIZE`,
+`AZ_VM_NAME`, `AZ_DNS_PREFIX`, `AZ_SSH_PUBKEY`, `AZ_RG`, `AZ_IMAGE`,
+`AZ_ADMIN_USER`. LE email falls back to `git config user.email` — set
+`LE_EMAIL=you@example.org` to override. A throwaway vault password is written
+to `.secrets/.vault-pass` on first run (gitignored). `out/client/` is also
+gitignored; the files inside are `chmod 600`.
+
 ## Client setup
 
 ### VMess client config (Shadowrocket, v2rayN, etc.)
