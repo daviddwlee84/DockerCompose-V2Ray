@@ -16,8 +16,8 @@ Nothing here is used by the current deploy path. It exists as an **archival refe
   - `v2ray/config.json` — had the hardcoded default UUID `bae399d4-13a4-46a3-b144-4af2c0004c2e`.
   - Both replaced by Jinja2 templates under the `vpn` Ansible role.
 - `clients/`
-  - `setup_linux_clash_client_old.sh` — superseded by `client/setup_linux_clash_client.sh`.
-  - `ui_pages_old/` — older YACD build output; the current build is at `client_docker/ui_pages/`.
+  - `setup_linux_clash_client_old.sh` — superseded by `clients/cli/setup_linux_clash_client.sh`.
+  - `ui_pages_old/` — older YACD build output; the current build is at `clients/docker/ui_pages/`.
 - `example/`
   - `clash_for_windows.yml` — original 40KB client config template with the hardcoded default UUID baked in.
 

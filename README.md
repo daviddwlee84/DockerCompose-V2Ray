@@ -39,8 +39,8 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 | `ansible/` | Playbooks, roles (`common`, `docker`, `vpn`, `letsencrypt`), inventory, vault. |
 | `scripts/` | `install_docker.sh` (rootful bootstrap), `verify.sh` (smoke test). |
 | `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `rotate-uuid`, `verify`, `logs-*`, `vault-edit`. |
-| `client/` | CLI Clash client setup for Linux. |
-| `client_docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
+| `clients/cli/` | CLI Clash client setup for Linux. |
+| `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
 | `docs/` | `FlowCharts.md` (Clash routing), `XrayUI.md` (alt admin panels), `LEGACY.md` (pre-refactor flow). |
 | `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
 
@@ -58,7 +58,7 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 
 ### Clash (Windows, macOS, Linux)
 
-See [`client_docker/config.yaml`](client_docker/config.yaml) for a working Clash config — edit `server:` and `uuid:` to point at your deploy. For a containerized local proxy + YACD dashboard, see [`client_docker/README.md`](client_docker/README.md). For a Linux CLI-only setup, see [`client/README.md`](client/README.md).
+See [`clients/docker/config.yaml`](clients/docker/config.yaml) for a working Clash config — edit `server:` and `uuid:` to point at your deploy. For a containerized local proxy + YACD dashboard, see [`clients/docker/README.md`](clients/docker/README.md). For a Linux CLI-only setup, see [`clients/cli/README.md`](clients/cli/README.md).
 
 ## Troubleshooting
 
