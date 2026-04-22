@@ -14,10 +14,12 @@
 # the running SSH session before the script can finish.
 #
 # Usage:
-#   scripts/az_rotate_ip.sh                # infer RG from .secrets/azure/{vms/current,last-vm.json}
-#   scripts/az_rotate_ip.sh <resource-group>
-#   AZ_RG=my-rg scripts/az_rotate_ip.sh
-#   AZ_YES=1 scripts/az_rotate_ip.sh       # skip confirm prompt
+#   scripts/az_rotate_ip.sh                           # infer RG from .secrets/azure/{vms/current,last-vm.json}
+#   scripts/az_rotate_ip.sh <resource-group>          # positional
+#   scripts/az_rotate_ip.sh --rg <resource-group>     # long flag
+#   RG=my-rg      scripts/az_rotate_ip.sh             # env var (RG or AZ_RG)
+#   AZ_RG=my-rg   scripts/az_rotate_ip.sh
+#   AZ_YES=1      scripts/az_rotate_ip.sh             # skip confirm prompt
 
 set -euo pipefail
 
@@ -48,7 +50,32 @@ fi
 
 # --- resolve RG + state file ----------------------------------------------
 
-AZ_RG="${1:-${AZ_RG:-}}"
+# Arg parse: accept <rg> positional, --rg <rg>, or fall back to RG / AZ_RG env.
+POSITIONAL=""
+FLAG_RG=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --rg)
+            shift
+            [ $# -gt 0 ] || die "--rg requires an argument"
+            FLAG_RG="$1"
+            ;;
+        --rg=*) FLAG_RG="${1#--rg=}" ;;
+        -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+        -*) die "unknown flag: $1" ;;
+        *)
+            [ -z "$POSITIONAL" ] || die "multiple RG arguments: $POSITIONAL, $1"
+            POSITIONAL="$1"
+            ;;
+    esac
+    shift
+done
+
+if [ -n "$POSITIONAL" ] && [ -n "$FLAG_RG" ] && [ "$POSITIONAL" != "$FLAG_RG" ]; then
+    die "conflicting resource groups: positional=$POSITIONAL, --rg=$FLAG_RG"
+fi
+
+AZ_RG="${POSITIONAL:-${FLAG_RG:-${AZ_RG:-${RG:-}}}}"
 STATE_FILE=""
 
 list_tracked_rgs() {
@@ -171,11 +198,16 @@ fi
 # --- rotate ----------------------------------------------------------------
 
 log "[1/5] Detaching PIP '$PIP_NAME' from NIC '$NIC_NAME'..."
+# Azure CLI's --remove matches JSON-body field names. The NIC ip-config body
+# uses publicIPAddress (lowerCamelCase with "IP" uppercase, per the ARM
+# schema) — PublicIpAddress has worked intermittently on some az-cli
+# versions but publicIPAddress is the canonical casing. If a future az-cli
+# rejects this, the documented alternative is --public-ip-address "".
 az network nic ip-config update \
     --resource-group "$AZ_RG" \
     --nic-name "$NIC_NAME" \
     --name "$IP_CONFIG_NAME" \
-    --remove PublicIpAddress \
+    --remove publicIPAddress \
     --output none
 
 log "[2/5] Deleting PIP '$PIP_NAME' (releasing $CURRENT_IP to Azure pool)..."
@@ -218,6 +250,19 @@ jq --arg ip "$NEW_IP" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     "$STATE_FILE" > "$TMP"
 mv "$TMP" "$STATE_FILE"
 log "Updated $STATE_FILE (public_ip, rotated_at)"
+
+# Keep the legacy mirror in sync if it tracks the rotated VM. az_up.sh
+# maintains last-vm.json as a copy-of-current; without this mirror step a
+# rotate would leave the legacy file with the old IP, and any reader still
+# falling back to last-vm.json (e.g. older vmess_client.py invocations)
+# would hand out stale configs.
+if [ "$STATE_FILE" != "$LEGACY_LAST_VM" ] && [ -f "$LEGACY_LAST_VM" ]; then
+    legacy_rg=$(jq -r '.rg // empty' "$LEGACY_LAST_VM" 2>/dev/null || true)
+    if [ "$legacy_rg" = "$AZ_RG" ]; then
+        cp "$STATE_FILE" "$LEGACY_LAST_VM"
+        log "Also updated legacy $LEGACY_LAST_VM (mirror of $AZ_RG)."
+    fi
+fi
 
 # --- verify DNS ------------------------------------------------------------
 

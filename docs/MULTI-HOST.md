@@ -40,6 +40,28 @@ flowchart LR
   the single-host flow; templates still reference `{{ domain }}` /
   `{{ v2ray_uuid }}` without caring which vault they came from.
 
+## Migration note (single → multi-host)
+
+Once every VM has its own `ansible/host_vars/<rg>/vault.yml`, the legacy
+group vault at `ansible/group_vars/vpn/vault.yml` is no longer *read* for
+anything — Ansible's `host_vars > group_vars` precedence means the
+per-host values win. However, if the legacy group vault is still present
+and encrypted, Ansible will still try to unlock it on every play, which
+means one wasted vault decryption per `just deploy`. It's harmless but
+noisy.
+
+Recommended cleanup once the multi-host flow is proven:
+
+```bash
+mkdir -p legacy
+git mv ansible/group_vars/vpn/vault.yml legacy/
+# or just delete it outright if you never plan to go back to the single-host layout:
+#   git rm ansible/group_vars/vpn/vault.yml
+```
+
+Keep `ansible/group_vars/vpn/vars.yml` — that's the non-secret alias layer
+and every host still needs it.
+
 ## Typical flow
 
 ```bash
@@ -57,10 +79,17 @@ just az-configure
 just deploy
 
 # Per-host operations — require an explicit <rg> when >1 VM is tracked.
-just az-client --rg vpn-test-you-1700000000           # or RG=... just az-client
+# All four scripts accept the same three forms: positional (shortest),
+# `--rg <rg>` (explicit long flag), and `RG=<rg>` (env var, convenient
+# inside `for rg in ...; do … done` loops).
+just az-client     vpn-test-you-1700000000
+just verify        vpn-test-you-1700000000
+just az-rotate-ip  vpn-test-you-1700000000            # GFW-ban recovery; keeps FQDN
+just az-down       vpn-test-you-1700000100            # retire one VM
+
+# Same thing via --rg / RG= (equivalent):
+just az-client --rg vpn-test-you-1700000000
 RG=vpn-test-you-1700000000  just verify
-just az-rotate-ip vpn-test-you-1700000000             # GFW-ban recovery; keeps FQDN
-just az-down vpn-test-you-1700000100                  # retire one VM
 ```
 
 ## Target-selection convention

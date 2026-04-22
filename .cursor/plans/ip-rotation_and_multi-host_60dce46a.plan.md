@@ -28,7 +28,7 @@ todos:
     status: completed
   - id: todo-1776775776552-63jwj4blf
     content: git commit (with specstory chat history) and merge to master (if you open branches; but we can just develop on master sequentially one by one feature)
-    status: in_progress
+    status: completed
 isProject: false
 ---
 

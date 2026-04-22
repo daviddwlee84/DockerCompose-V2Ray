@@ -2,11 +2,13 @@
 # Tear down an Azure RG tracked in .secrets/azure/vms/<rg>.json.
 #
 # Usage:
-#   scripts/az_down.sh                     # tear down vms/current (fails if >1 VM and no current)
-#   scripts/az_down.sh <rg>                # tear down a specific RG
-#   scripts/az_down.sh -y                  # no confirm (cycle / CI use)
-#   scripts/az_down.sh <rg> -y --keep-keys # tear down RG, keep per-RG SSH key dir
+#   scripts/az_down.sh                         # tear down vms/current (fails if >1 VM and no current)
+#   scripts/az_down.sh <rg>                    # positional
+#   scripts/az_down.sh --rg <rg>               # long flag
+#   RG=explicit-rg    scripts/az_down.sh -y    # env var (RG or AZ_RG)
 #   AZ_RG=explicit-rg scripts/az_down.sh -y
+#   scripts/az_down.sh -y                      # no confirm (cycle / CI use)
+#   scripts/az_down.sh <rg> -y --keep-keys     # tear down RG, keep per-RG SSH key dir
 #
 # State layout reminder (see az_up.sh header):
 #   .secrets/azure/vms/<rg>.json  per-VM handoff
@@ -25,21 +27,40 @@ HOST_VARS_DIR="$REPO_ROOT/ansible/host_vars"
 YES=0
 KEEP_KEYS=0
 POSITIONAL=""
-for arg in "$@"; do
-    case "$arg" in
+FLAG_RG=""
+while [ $# -gt 0 ]; do
+    case "$1" in
         -y|--yes) YES=1 ;;
         --keep-keys) KEEP_KEYS=1 ;;
+        --rg)
+            shift
+            [ $# -gt 0 ] || { echo "[az-down] --rg requires an argument" >&2; exit 2; }
+            FLAG_RG="$1"
+            ;;
+        --rg=*) FLAG_RG="${1#--rg=}" ;;
         -h|--help)
-            sed -n '2,16p' "$0"
+            sed -n '2,18p' "$0"
             exit 0
             ;;
-        -*) printf '[az-down] unknown flag: %s\n' "$arg" >&2; exit 2 ;;
+        -*) printf '[az-down] unknown flag: %s\n' "$1" >&2; exit 2 ;;
         *)
-            [ -z "$POSITIONAL" ] || { printf '[az-down] multiple RG arguments: %s, %s\n' "$POSITIONAL" "$arg" >&2; exit 2; }
-            POSITIONAL="$arg"
+            [ -z "$POSITIONAL" ] || { printf '[az-down] multiple RG arguments: %s, %s\n' "$POSITIONAL" "$1" >&2; exit 2; }
+            POSITIONAL="$1"
             ;;
     esac
+    shift
 done
+
+if [ -n "$POSITIONAL" ] && [ -n "$FLAG_RG" ] && [ "$POSITIONAL" != "$FLAG_RG" ]; then
+    echo "[az-down] conflicting resource groups: positional=$POSITIONAL, --rg=$FLAG_RG" >&2
+    exit 2
+fi
+POSITIONAL="${POSITIONAL:-$FLAG_RG}"
+
+# RG= is an alias for AZ_RG for symmetry with vmess_client.py / verify.sh.
+if [ -z "${AZ_RG:-}" ] && [ -n "${RG:-}" ]; then
+    AZ_RG="$RG"
+fi
 
 log() { printf '[az-down] %s\n' "$*" >&2; }
 die() { printf '[az-down] ERROR: %s\n' "$*" >&2; exit 1; }

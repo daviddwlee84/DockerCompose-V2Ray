@@ -12,10 +12,11 @@ Reads domain + UUID from the per-host ansible-vault–encrypted vault
 defaults. Falls back to the legacy single-host vault at
 `ansible/group_vars/vpn/vault.yml` when no per-host layout is present.
 
-With multiple tracked VMs, you must pass `--rg <resource-group>` (or set
-`RG=<rg>`). With exactly one tracked VM, defaults to that one.
+With multiple tracked VMs, you must pass `<resource-group>` positionally
+(or `--rg <rg>`, or set `RG=<rg>`). With exactly one tracked VM, defaults
+to that one.
 
-Writes to out/client/ (or out/client/<rg>/ when --rg is passed):
+Writes to out/client/ (or out/client/<rg>/ when an RG is passed):
     vmess.txt      single-line vmess://<base64(json)> URL (v2rayN / Shadowrocket)
     config.json    pretty inner JSON (v2rayN import-from-clipboard fallback)
     clash.yaml     single Clash VMess proxy entry
@@ -28,7 +29,9 @@ Also prints:
 
 Usage:
     scripts/vmess_client.py
-    scripts/vmess_client.py --rg vpn-test-you-1234
+    scripts/vmess_client.py vpn-test-you-1234          # positional RG
+    scripts/vmess_client.py --rg vpn-test-you-1234     # long flag
+    RG=vpn-test-you-1234 scripts/vmess_client.py       # env var
     scripts/vmess_client.py --remark 'my-tokyo-node'
     scripts/vmess_client.py --out custom/dir
 """
@@ -101,7 +104,8 @@ def resolve_target_rg(explicit: str | None) -> str | None:
     """Pick the RG whose vault we should read.
 
     Rules (matches just az-client / just verify / just az-down):
-      - --rg <name>          → use it (error if not tracked)
+      - positional <rg>      → use it (error if not tracked)
+      - --rg <name>          → same as positional
       - RG env var           → treated like --rg
       - exactly one tracked  → default to it
       - multiple tracked     → list + error (require explicit)
@@ -123,7 +127,7 @@ def resolve_target_rg(explicit: str | None) -> str | None:
         return rgs[0]
 
     if len(rgs) > 1:
-        log("Multiple VMs tracked — pass --rg <resource-group> (or RG=<rg>):")
+        log("Multiple VMs tracked — pass <resource-group> (positional, --rg, or RG=<rg>):")
         for name in rgs:
             try:
                 data = json.loads((VMS_DIR / f"{name}.json").read_text())
@@ -335,15 +339,19 @@ def resolve_remark(explicit: str | None, rg: str | None) -> str:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0] if __doc__ else "")
+    p.add_argument("rg_positional", nargs="?", default=None, metavar="RG",
+                   help="Resource group to target (positional; same as --rg).")
     p.add_argument("--rg", default=None,
                    help="Resource group to target (required when >1 VM is tracked; also accepts RG= env var).")
     p.add_argument("--remark", default=None, help="Friendly name shown in the client (default: DNS short name)")
-    p.add_argument("--out", default=None, help="Output directory (default: out/client, or out/client/<rg>/ when --rg is set)")
+    p.add_argument("--out", default=None, help="Output directory (default: out/client, or out/client/<rg>/ when an RG is selected)")
     p.add_argument("--ws-path", default=None, help=f"Override WebSocket path (default: {DEFAULT_WS_PATH})")
     p.add_argument("--alter-id", type=int, default=None, help=f"Override alterId (default: {DEFAULT_ALTER_ID})")
     args = p.parse_args()
 
-    rg = resolve_target_rg(args.rg)
+    if args.rg_positional and args.rg and args.rg_positional != args.rg:
+        die(f"conflicting resource groups: positional={args.rg_positional!r} vs --rg={args.rg!r}")
+    rg = resolve_target_rg(args.rg_positional or args.rg)
 
     vault = read_vault(rg)
     defaults = read_non_secret_defaults()

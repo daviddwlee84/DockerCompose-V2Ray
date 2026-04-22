@@ -2,8 +2,10 @@
 # Smoke test the deployed VPN server.
 #
 # Usage:
-#   DOMAIN=your.domain.tld ./scripts/verify.sh
-#   RG=<resource-group>    ./scripts/verify.sh   # pulls DOMAIN from vms/<rg>.json
+#   ./scripts/verify.sh <rg>                        # positional
+#   ./scripts/verify.sh --rg <rg>                   # long flag
+#   RG=<rg>             ./scripts/verify.sh         # env var
+#   DOMAIN=your.tld     ./scripts/verify.sh         # explicit domain (skips RG lookup)
 #
 # With multiple VMs tracked under .secrets/azure/vms/, run the script once
 # per RG (or set DOMAIN manually). Example multi-VM loop:
@@ -18,7 +20,34 @@ REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 VMS_DIR="$REPO_ROOT/.secrets/azure/vms"
 LEGACY_LAST_VM="$REPO_ROOT/.secrets/azure/last-vm.json"
 
-# Allow RG=<rg> as a shortcut to populate DOMAIN from the state file.
+# Arg parse: accept <rg> positional or --rg <rg>; merge with RG= env var.
+POSITIONAL=""
+FLAG_RG=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --rg)
+            shift
+            [ $# -gt 0 ] || { echo "verify.sh: --rg requires an argument" >&2; exit 2; }
+            FLAG_RG="$1"
+            ;;
+        --rg=*) FLAG_RG="${1#--rg=}" ;;
+        -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+        -*) echo "verify.sh: unknown flag: $1" >&2; exit 2 ;;
+        *)
+            [ -z "$POSITIONAL" ] || { echo "verify.sh: multiple RG arguments: $POSITIONAL, $1" >&2; exit 2; }
+            POSITIONAL="$1"
+            ;;
+    esac
+    shift
+done
+
+if [ -n "$POSITIONAL" ] && [ -n "$FLAG_RG" ] && [ "$POSITIONAL" != "$FLAG_RG" ]; then
+    echo "verify.sh: conflicting resource groups: positional=$POSITIONAL, --rg=$FLAG_RG" >&2
+    exit 2
+fi
+RG="${POSITIONAL:-${FLAG_RG:-${RG:-}}}"
+
+# Resolve DOMAIN from RG (positional, --rg, or RG= env) if not already set.
 if [ -z "${DOMAIN:-}" ] && [ -n "${RG:-}" ]; then
     state="$VMS_DIR/$RG.json"
     if [ ! -f "$state" ]; then

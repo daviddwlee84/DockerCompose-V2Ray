@@ -85,9 +85,9 @@ deploy-fast:
 rotate-uuid:
     cd {{ansible_dir}} && ansible-playbook playbooks/rotate-uuid.yml -e new_uuid=$(uuidgen) {{ansible_opts}}
 
-# Smoke-test the deployed host. Requires DOMAIN env var.
-verify:
-    scripts/verify.sh
+# Smoke-test the deployed host. Pass <rg> (or set DOMAIN / RG); zero-arg uses vms/current when unique.
+verify *args:
+    scripts/verify.sh {{args}}
 
 # Tail v2ray access log over SSH.
 logs-v2ray:
@@ -101,13 +101,62 @@ logs-nginx:
 ps:
     cd {{ansible_dir}} && ansible vpn -a "docker compose -f /opt/vpn/compose.yml ps"
 
-# Edit the encrypted vault.
-vault-edit:
-    cd {{ansible_dir}} && ansible-vault edit group_vars/vpn/vault.yml
+# Edit the encrypted vault for a specific host (or legacy group vault). Usage: just vault-edit [<rg>]
+vault-edit rg="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{ansible_dir}}
+    RG="{{rg}}"
+    if [ -n "$RG" ]; then
+        target="host_vars/$RG/vault.yml"
+        if [ ! -f "$target" ]; then
+            echo "[vault-edit] host_vars/$RG/vault.yml not found. Tracked hosts:" >&2
+            if compgen -G "host_vars/*/vault.yml" >/dev/null; then
+                for f in host_vars/*/vault.yml; do printf '  %s\n' "$(basename "$(dirname "$f")")" >&2; done
+            else
+                echo "  (none — run 'just az-configure' first)" >&2
+            fi
+            exit 1
+        fi
+        exec ansible-vault edit "$target"
+    fi
+    if compgen -G "host_vars/*/vault.yml" >/dev/null; then
+        echo "[vault-edit] Multi-host layout detected — pass <rg>:" >&2
+        for f in host_vars/*/vault.yml; do printf '  just vault-edit %s\n' "$(basename "$(dirname "$f")")" >&2; done
+        exit 1
+    fi
+    if [ -f group_vars/vpn/vault.yml ]; then
+        echo "[vault-edit] NOTE: editing legacy group_vars/vpn/vault.yml. Once you move to multi-host, use 'just vault-edit <rg>' against host_vars/<rg>/vault.yml. See docs/MULTI-HOST.md." >&2
+        exec ansible-vault edit group_vars/vpn/vault.yml
+    fi
+    echo "[vault-edit] No vault files found. Copy ansible/group_vars/vpn/vault.yml.example or run 'just az-configure'." >&2
+    exit 1
 
-# Encrypt a freshly-created vault.yml (one-time after copying from vault.yml.example).
-vault-encrypt:
-    cd {{ansible_dir}} && ansible-vault encrypt group_vars/vpn/vault.yml
+# Encrypt a freshly-created vault.yml (one-time after copying from vault.yml.example). Usage: just vault-encrypt [<rg>]
+vault-encrypt rg="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{ansible_dir}}
+    RG="{{rg}}"
+    if [ -n "$RG" ]; then
+        target="host_vars/$RG/vault.yml"
+        if [ ! -f "$target" ]; then
+            echo "[vault-encrypt] host_vars/$RG/vault.yml not found." >&2
+            exit 1
+        fi
+        exec ansible-vault encrypt "$target"
+    fi
+    if compgen -G "host_vars/*/vault.yml" >/dev/null; then
+        echo "[vault-encrypt] Multi-host layout detected — pass <rg>:" >&2
+        for f in host_vars/*/vault.yml; do printf '  just vault-encrypt %s\n' "$(basename "$(dirname "$f")")" >&2; done
+        exit 1
+    fi
+    if [ -f group_vars/vpn/vault.yml ]; then
+        echo "[vault-encrypt] NOTE: encrypting legacy group_vars/vpn/vault.yml. For multi-host, prefer 'just vault-encrypt <rg>'. See docs/MULTI-HOST.md." >&2
+        exec ansible-vault encrypt group_vars/vpn/vault.yml
+    fi
+    echo "[vault-encrypt] No vault.yml found to encrypt." >&2
+    exit 1
 
 # --- Azure throwaway validation ---
 #
@@ -128,17 +177,45 @@ az-up *args:
 az-configure *args:
     scripts/az_configure.py {{args}}
 
-# Generate client configs. Pass --rg <rg> (or RG=<rg>) to pick when multiple VMs are tracked.
+# Generate client configs. Pass <rg> (positional / --rg / RG=) when multiple VMs are tracked.
 az-client *args:
     scripts/vmess_client.py {{args}}
 
-# Tear down a single tracked Azure RG. Pass <rg> to target a specific VM; defaults to vms/current.
+# Tear down a single tracked Azure RG. Pass <rg> (positional / --rg / RG=); defaults to vms/current.
 az-down *args:
     scripts/az_down.sh {{args}}
 
-# Rotate the Azure public IP (keeps FQDN / cert / UUID). Pass <rg> or set AZ_RG; defaults to vms/current.
+# Rotate the Azure public IP (keeps FQDN / cert / UUID). Pass <rg> (positional / --rg / RG=); defaults to vms/current.
 az-rotate-ip *args:
     scripts/az_rotate_ip.sh {{args}}
+
+# List every tracked Azure VM (.secrets/azure/vms/*.json). '*' marks the vms/current target.
+az-list:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VMS_DIR=".secrets/azure/vms"
+    if [ ! -d "$VMS_DIR" ] || ! compgen -G "$VMS_DIR/*.json" >/dev/null; then
+        echo "No tracked VMs. Run 'just az-up' to provision one."
+        exit 0
+    fi
+    command -v jq >/dev/null || { echo "[az-list] jq not on PATH (brew install jq)" >&2; exit 1; }
+    current=""
+    if [ -L "$VMS_DIR/current" ]; then
+        current=$(basename "$(readlink "$VMS_DIR/current")" .json)
+    fi
+    printf '%s %-32s %-55s %-18s %s\n' ' ' 'RG' 'FQDN' 'PUBLIC_IP' 'CREATED_AT'
+    printf '%s %-32s %-55s %-18s %s\n' ' ' '--' '----' '---------' '----------'
+    for f in "$VMS_DIR"/*.json; do
+        base=$(basename "$f")
+        [ "$base" = "current" ] && continue
+        rg=$(jq -r '.rg // "?"' "$f")
+        fqdn=$(jq -r '.fqdn // "?"' "$f")
+        ip=$(jq -r '.public_ip // "?"' "$f")
+        created=$(jq -r '.created_at // "?"' "$f")
+        marker=' '
+        [ "$rg" = "$current" ] && marker='*'
+        printf '%s %-32s %-55s %-18s %s\n' "$marker" "$rg" "$fqdn" "$ip" "$created"
+    done
 
 # One-shot single-VM loop: provision → configure → deploy → verify → client-config → pause → teardown. For multi-region, run az-up per region manually then `just deploy`.
 az-cycle:

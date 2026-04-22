@@ -10,6 +10,11 @@
 # precedence (host_vars > group_vars) means you can leave this file empty
 # if every host has its own per-host vault.
 #
+# Migration hint: once you've moved fully to multi-host, it's OK (and
+# recommended) to delete or archive this group vault — otherwise Ansible
+# still does one redundant decryption per `just deploy`. See
+# docs/MULTI-HOST.md "Migration note".
+#
 # Vault password file: ~/.vault-pass (gitignored, chmod 600).
 
 vault_domain: your-dns-name.japaneast.cloudapp.azure.com
