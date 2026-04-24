@@ -50,7 +50,7 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 | `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `rotate-uuid`, `verify`, `logs-*`, `vault-edit`. |
 | `clients/cli/` | CLI Clash client setup for Linux. |
 | `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
-| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
+| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LOG-ROTATION.md` (logrotate config + manual patch recipe for a running VPS), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
 | `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
 
 ## One-shot Azure validation (throwaway VM)
