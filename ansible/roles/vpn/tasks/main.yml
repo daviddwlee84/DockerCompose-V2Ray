@@ -21,6 +21,15 @@
     - "{{ deploy_path }}/runtime/logs/nginx"
     - "{{ deploy_path }}/runtime/logs/v2ray"
 
+- name: Install logrotate config for nginx + v2ray logs
+  ansible.builtin.template:
+    src: logrotate-vpn.conf.j2
+    dest: /etc/logrotate.d/vpn
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
 - name: Sync static assets (nginx landing page)
   ansible.posix.synchronize:
     src: "{{ vpn_static_src }}/"

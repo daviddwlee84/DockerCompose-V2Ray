@@ -1,0 +1,12 @@
+# Managed by Ansible — edits on the VPS will be overwritten.
+/opt/vpn/runtime/logs/nginx/*.log
+/opt/vpn/runtime/logs/v2ray/*.log {
+    daily
+    rotate 7
+    maxsize 20M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}
