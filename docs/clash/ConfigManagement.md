@@ -112,6 +112,40 @@ GUI（如 Clash Verge Rev）背後就是用這些 API；它另外提供：
   Clash 設定，並可注入統一的 rule-providers / proxy-groups 範本。
 - Clash Verge Rev 的「多訂閱合併」可在 client 端直接合併。
 
+## 在 terminal 改配置：TUI / 編輯檔案 / API 三選一
+
+常見問題：「在終端機要用 TUI 快速改、直接編輯設定檔、還是走 API？」三者**用途不同、可並用**：
+
+| 方式 | 改的是什麼 | 是否持久 | 適合 |
+|---|---|---|---|
+| **編輯設定檔** + reload | `config.yaml` 本體 | **持久**（檔案即真相，可進 git） | 結構性變更：加節點/規則、改 dns/groups |
+| **TUI**（如 [`clashtui`](https://github.com/JohanChane/clashtui)） | profile 檔 + 觸發 reload | 持久（它寫檔） | 無頭 Linux 上**管理多 profile、切換、更新訂閱、測延遲** |
+| **API / dashboard** | 核心**執行中**狀態 | **多為暫時**（reload 後失效，除非寫回檔） | 臨時操作：切節點、改 mode、healthcheck、看流量/日誌 |
+
+關鍵心智：
+
+- **設定檔 = 真相來源（source of truth）**，建議版本控管；改完用
+  `PUT /configs?force=true` 熱重載（見 [API.md](API.md)），不必重啟核心。
+- **API/dashboard 的執行期切換是暫時的** —— 例如用 `PUT /proxies/:name` 切了節點，
+  一旦 reload 設定檔就回到檔案裡寫的預設。要持久化得寫回設定檔。
+- **TUI 介於兩者之間**：它直接編輯 profile 檔（持久）並透過 API 觸發套用，
+  所以在伺服器/旁路由這種沒有 GUI 的場景最順手。
+
+```bash
+# 編輯檔案 → 熱重載（持久）
+$EDITOR config.yaml
+export CLASH_SECRET='your-secret-here'
+curl -H "Authorization: Bearer ${CLASH_SECRET}" \
+  -X PUT 'http://127.0.0.1:9090/configs?force=true' -d '{"path":"","payload":""}'
+
+# 執行期切節點（暫時，reload 後失效）
+curl -H "Authorization: Bearer ${CLASH_SECRET}" \
+  -X PUT 'http://127.0.0.1:9090/proxies/PROXY' -d '{"name":"Proxy 1"}'
+```
+
+> 建議流程：**檔案管結構（git）＋ TUI/dashboard 管日常切換**。
+> 大改動走 providers + 熱重載，臨時測試走 API。
+
 ## 系統化分層架構（建議）
 
 ```mermaid

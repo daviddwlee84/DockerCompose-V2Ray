@@ -70,13 +70,41 @@ mihomo 核心；dashboard 則純前端，透過 [API.md](API.md) 的 9090 控制
 | [`yacd`](https://github.com/haishanh/yacd) | 我們 vendored 的（[`hinak0/yacd`](https://github.com/hinak0/yacd) 分支，見 [`clients/docker/ui_pages/`](../../clients/docker/ui_pages/)） |
 | [`zashboard`](https://github.com/Zephyruso/zashboard) | 社群替代 |
 
+## 5. 行動端 client（iOS / Android）
+
+行動端同樣是「殼 + 核心」。**iOS 的開源選擇近年明顯變多**，不必只靠閉源付費的
+Shadowrocket。
+
+### iOS
+
+| App | 核心 | 開源 | 費用 | 備註 |
+|---|---|---|---|---|
+| [**Clash Mi (clashmi)**](https://github.com/KaringX/clashmi) | mihomo | **是（GPL-3.0）** | 免費 | 內建 mihomo + zashboard 面板，App Store 上架，宣稱不收集資料；官網 [clashmi.app](https://clashmi.app)（**只認官網，慎防二次打包**） |
+| [Karing](https://github.com/KaringX/Karing) | sing-box | **是** | 免費 | 同 KaringX 團隊，sing-box 核心，多協議 |
+| [sing-box (SFI)](https://github.com/SagerNet/sing-box) | sing-box | **是** | 免費 | 官方 iOS app，支援 VLESS/Reality/Hysteria2/TUIC |
+| Shadowrocket | 自家 | 否 | 付費 | 老牌、相容廣（vmess/vless/reality/hy2/tuic），但閉源 |
+| Stash | clash 系 | 否 | 付費 | clash 相容、體驗佳，閉源 |
+| Loon / Quantumult X | 自家 | 否 | 付費 | 閉源 |
+
+> iOS 注意：多數需**非中國區 Apple ID** 才搜得到/裝得了；優先選**開源 + 官方來源**
+> （見本頁「非開源 client 的信任問題」）。
+
+### Android
+
+| App | 核心 | 開源 | 備註 |
+|---|---|---|---|
+| [**FlClash**](https://github.com/chen08209/FlClash) | mihomo | **是（GPL-3.0）** | 跨平台、無廣告、WebDAV 同步，社群活躍（4w+ star） |
+| [ClashMetaForAndroid (CMFA)](https://github.com/MetaCubeX/ClashMetaForAndroid) | mihomo | **是** | MetaCubeX 官方 Android GUI |
+| [Clash Mi (clashmi)](https://github.com/KaringX/clashmi) | mihomo | **是** | 同 iOS 版，跨平台一致 |
+| [NekoBox / sing-box for Android](https://github.com/MatsuriDayo/NekoBoxForAndroid) | sing-box | **是** | sing-box 系，多協議 |
+
 ## 按平台選型建議
 
 | 情境 | 建議 |
 |---|---|
 | 桌面日常使用（Win/macOS/Linux） | **Clash Verge Rev**（內建 mihomo，最省心） |
 | 無頭 Linux / 伺服器 / 旁路由 | **mihomo 核心 + `clashtui`**，或 **ShellCrash** 一鍵透明代理 |
-| 行動裝置 | FlClash（Android）/ Stash（iOS） |
+| 行動裝置 | **FlClash / Clash Mi**（Android）、**Clash Mi / sing-box**（iOS，開源）；不介意閉源付費才選 Shadowrocket |
 | 本地 Docker 快速測試（本 repo） | 現有 [`clients/docker/`](../../clients/docker/)，建議把核心從 `clash-core` 升級為 **mihomo**（見 [Core.md](Core.md)） |
 | 只想看狀態/切節點 | 任何核心 + metacubexd / yacd dashboard（見 [API.md](API.md)） |
 
