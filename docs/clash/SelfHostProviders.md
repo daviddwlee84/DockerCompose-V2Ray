@@ -131,6 +131,11 @@ DOMAIN-SET,<你的-domains.list-url>,POLICY  # 域名集：每行只有域名
 **一份分門別類的來源**，用一個建置步驟轉成各 client 要的格式，發佈到固定 URL；
 client 只指向那些 URL，**更新一次 → 全部自動套用**。
 
+> **本架構已落地**：[daviddwlee84/clash-rules](https://github.com/daviddwlee84/clash-rules)
+> —— 把本 repo legacy Clash 設定的 1272 條規則拆成 6 個分類來源（classical 格式），
+> CI 驗證 + 建置後發佈到 `release` 分支，Clash（rule-providers）與
+> Shadowrocket（RULE-SET）共用同一份清單。
+
 ```mermaid
 flowchart TD
   subgraph repo [你的 rules repo（真相來源，git 版本化）]
