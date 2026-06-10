@@ -125,19 +125,112 @@ DOMAIN-SET,<你的-domains.list-url>,POLICY  # 域名集：每行只有域名
 [Johnshall/Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever)
 （每日 8 時重建，issue #7）、[blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script)。
 
-## 一份來源、多種 client
+## Single source of truth：一次維護、全 client 套用
 
-Clash 與 Shadowrocket 規則語法**高度重疊**（`DOMAIN-SUFFIX,...` / `IP-CIDR,...` / `GEOIP,...`），
-規則檔常可共用。節點則格式不同（YAML vs `.conf`），靠 **subconverter** 從同一份訂閱產生兩種輸出：
+這是解你痛點的關鍵——**別在每個 client 各自打補丁**（重複又容易漂移），而是維護
+**一份分門別類的來源**，用一個建置步驟轉成各 client 要的格式，發佈到固定 URL；
+client 只指向那些 URL，**更新一次 → 全部自動套用**。
 
-```text
-單一訂閱 / 節點來源
-        │  subconverter (自架)
-        ├── &target=clash   → clash.yaml（給 mihomo）
-        └── &target=shadowrocket → shadowrocket.conf（給 SR）
+```mermaid
+flowchart TD
+  subgraph repo [你的 rules repo（真相來源，git 版本化）]
+    src["分類來源檔<br/>ads.list / cn.list / proxy.list / direct.list ..."]
+  end
+  src -->|GitHub Actions / 腳本| build["建置：轉格式"]
+  build --> mrs["clash: *.mrs / *.yaml"]
+  build --> srlist["shadowrocket: *.list / *.conf"]
+  mrs --> cdn["發佈：CDN / nginx<br/>(固定 URL + 版本 tag)"]
+  srlist --> cdn
+  cdn --> c1["Clash (mihomo)"]
+  cdn --> c2["Shadowrocket"]
+  cdn --> c3["其他 client"]
 ```
 
-subconverter 也能在轉換時統一注入你的 `rule-providers` / `RULE-SET` 範本，做到「規則集中、輸出多端」。
+落地要點：
+
+1. **來源分類維護**：一個 repo，按用途拆檔（`ads`、`cn-direct`、`proxy`、`media`、
+   `self`…），每類一個純文字清單。你日後就是往這些檔案加行，**只改這裡**。
+2. **規則語法盡量共用**：Clash 與 Shadowrocket 的規則語法**高度重疊**
+   （`DOMAIN-SUFFIX,...` / `IP-CIDR,...` / `GEOIP,...`），同一份 `classical` 清單兩邊常可直接用。
+3. **建置轉格式**：
+   - Clash 大集轉 `.mrs`：`mihomo convert-ruleset domain text ads.list ads.mrs`。
+   - 節點（格式不同：YAML vs `.conf`）用 **[subconverter](https://github.com/tindy2013/subconverter)**
+     從同一份訂閱輸出多端：`&target=clash` → `clash.yaml`、`&target=shadowrocket` → `shadowrocket.conf`，
+     並在轉換時統一注入你的 `rule-providers` / `RULE-SET` 範本。
+4. **發佈到固定 URL**：GitHub Release/Pages + jsDelivr，或推到你自家 nginx。**用版本 tag**
+   （如 `@v3` 或日期）讓你能控管何時升級，避免上游一改就炸。
+5. **client 端只引用 URL**：base 設定幾乎不動；要改規則就改來源 repo，client 靠 `interval`
+   自動拉新（或手動 `PUT /configs?force=true` 立即套用）。
+
+> 一句話：**規則/base 是程式碼（進 git、CI 建置、發版），client 是消費者。**
+> 這正是下面那些公開 rule-set repo 的運作模式——你完全可以自己照做（見「公開維護的 rule-set」）。
+
+## 自架 URL 的 auth（避免被直接破解/掃到）
+
+公開規則無所謂，但**節點清單**的 URL 一旦外洩等於送人帳號。幾種由簡到強的保護：
+
+| 方法 | 怎麼做 | client 支援 | 強度 |
+|---|---|---|---|
+| **隱秘長路徑（capability URL）** | URL 帶一段不可猜的隨機 token：`/p/8f3a…e21/nodes.yaml` | 全部（就是個 URL） | 低中（外洩即破，但掃不到） |
+| **HTTP header token**（推薦給 Clash） | provider 設 `header: { Authorization: ['Bearer <token>'] }` | **mihomo proxy/rule-providers 支援** | 中高 |
+| **nginx basic-auth** | `auth_basic` + `.htpasswd`；URL 用 `https://user:pass@host/...` | Clash/SR 多支援 URL 內帳密 | 中 |
+| **IP 允許清單** | nginx `allow/deny`，只放你的出口 IP | 全部 | 中（IP 浮動時麻煩） |
+| **Cloudflare Access / 簽名 URL** | R2 presigned URL、Cloudflare Access token | 看 client | 高 |
+| **mTLS（雙向憑證）** | nginx `ssl_verify_client on` | 少數 client | 最高（門檻也高） |
+
+mihomo 用 header 認證（**節點與規則 provider 都支援**）：
+
+```yaml
+proxy-providers:
+  my-nodes:
+    type: http
+    url: "https://vpn.example.com/private/nodes.yaml"
+    header:
+      Authorization:
+        - "Bearer <your-long-random-token>"
+    interval: 3600
+    path: ./providers/my-nodes.yaml
+```
+
+實務建議：
+
+- **節點走「header token 或隱秘路徑 + HTTPS」**；規則走公開 CDN。
+- **Shadowrocket 沒有自訂 header 拉 RULE-SET 的能力** → 對 SR 的私密節點，用
+  **隱秘路徑** 或 **`user:pass@` basic-auth**，別期待 Bearer header。
+- **token 可輪換**：外洩就換路徑/token，重新發給自己的 client（成本低）。
+- 配合 nginx：給 provider 路徑單獨開 `location`，套 auth + 關目錄列表（`autoindex off`）+
+  加 `Cache-Control`，並可 `add_header X-Robots-Tag noindex` 避免被索引。
+
+## 公開維護的 rule-set（以及我們能否照做）
+
+有，而且很成熟——這些就是「single source of truth + CI 建多格式」的現成範例：
+
+| Repo | 內容 | 格式 | 備註 |
+|---|---|---|---|
+| [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) | reject/direct/proxy/gfw/cncidr… | Clash `text`（domain/ipcidr） | 最常用、每日更新，走 `@release` tag |
+| [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat) | geosite/geoip 全套 | **`.mrs`**（mihomo 原生）/ dat | mihomo 生態核心，`meta` 分支 |
+| [blackmatrix7/ios_rule_script](https://github.com/blackmatrix7/ios_rule_script) | 超細分類（各 App/服務） | **多格式**：Clash / Shadowrocket / Surge / Quan… | **多端建置的最佳範本** |
+| [Johnshall/Shadowrocket-ADBlock-Rules-Forever](https://github.com/Johnshall/Shadowrocket-ADBlock-Rules-Forever) | 去廣告 | Shadowrocket `.conf` | 每日 8 時重建（issue #7） |
+
+直接用（Clash，jsDelivr 較穩）：
+
+```yaml
+rule-providers:
+  reject: { type: http, behavior: domain, format: text, interval: 86400,
+            url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt",
+            path: ./ruleset/reject.yaml }
+rules:
+  - RULE-SET,reject,REJECT
+  - GEOIP,CN,DIRECT
+  - MATCH,PROXY
+```
+
+**我們能不能照做？能，而且建議。** blackmatrix7 的模式正是答案：
+**一份來源 → GitHub Actions → 同時產出 Clash/Shadowrocket/Surge 等格式 → 發佈到 CDN。**
+你自己的 rules repo 照搬這套：你維護分類來源 + 一支轉換腳本/Action，
+公開規則用 jsDelivr，私密節點走前述 auth。需要時也可**站在巨人肩上**——base 引用
+Loyalsoldier/meta-rules-dat 的通用集，只自維護「你個人專屬」那幾類（self/自訂分流），
+兩者疊加。
 
 ## Best practice（重點整理）
 
@@ -150,6 +243,11 @@ subconverter 也能在轉換時統一注入你的 `rule-providers` / `RULE-SET` 
    萬一 provider 拉取失敗，client 仍可運作。
 6. **版本化你的「真相來源」**：規則/base 進 git；節點清單由產生器輸出、不入庫。
 7. **熱更新而非重啟**：改完用 `PUT /configs?force=true`（見 [API.md](API.md)）。
+8. **單一真相來源 + CI 建多格式**：規則只在一個 repo 維護，靠腳本/Action 轉成各 client 格式
+   再發佈——避免在每個 client 重複打補丁（解你的核心痛點）。
+9. **釘版本 tag**：URL 用 `@v3` / 日期 tag，自己決定何時升級，避免上游一改就連帶炸。
+10. **節點 URL 加 auth**：header token（Clash）或隱秘路徑 / basic-auth（Shadowrocket），
+    token 可隨時輪換。
 
 ## 對接本專案
 

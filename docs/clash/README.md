@@ -15,7 +15,7 @@ Verge Rev / Clash Mi + 協議建議 + terminal 工作流）。各主題細節：
 | 3 | [API.md](API.md) | port 9090 有 **RESTful API 但官方無 OpenAPI/Swagger**；端點齊全，需自設 `secret`（我們目前綁 `0.0.0.0` 卻沒設，是隱憂）。 |
 | 4 | [Clients.md](Clients.md) | **一個 server、多個 client**：核心(mihomo) / GUI(Clash Verge Rev) / TUI(clashtui) / 行動端(Clash Mi/FlClash) / dashboard 分層；對應 issue #6/#8。 |
 | 5 | [ConfigManagement.md](ConfigManagement.md) | 系統化 = base 設定瘦身 + 節點/規則 **URL 化（proxy-providers / rule-providers）** + 用 API 熱更新；terminal 改配置 TUI/檔案/API 三選一。 |
-| 5b | [SelfHostProviders.md](SelfHostProviders.md) | **如何自架 provider**：規則公開、節點保護；通用 Clash + Shadowrocket（`.conf` / `RULE-SET`）兩種格式 + best practice；對接本專案 nginx。 |
+| 5b | [SelfHostProviders.md](SelfHostProviders.md) | **如何自架 provider**：single source of truth（一次維護全 client 套用）、Clash + Shadowrocket 兩格式、URL 的 auth 方法、公開 rule-set（Loyalsoldier / blackmatrix7）與照做方式；對接本專案 nginx。 |
 | 6 | [../ProtocolEvaluation.md](../ProtocolEvaluation.md) | VMess 已非首選；**VLESS+Vision+REALITY** 抗 GFW 最強，含偵測風險排序與選型矩陣。 |
 
 ## 與本專案的關係
