@@ -88,6 +88,9 @@ rules:
 | `format` | `yaml` / `text` / `mrs`（mihomo 二進位，體積小、載入快） |
 | `url` / `path` / `interval` | 來源 URL / 本地快取路徑 / 刷新秒數 |
 
+> 這裡的 `url` 從哪來、怎麼**自己 host**（含 Shadowrocket 格式與 best practice），
+> 見專章 [SelfHostProviders.md](SelfHostProviders.md)。
+
 ### 熱更新（不重啟核心）
 
 透過 [API.md](API.md) 的 9090 端點即可熱套用：

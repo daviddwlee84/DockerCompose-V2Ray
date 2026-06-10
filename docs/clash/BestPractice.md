@@ -49,6 +49,7 @@ flowchart LR
 - **協議**：日常在 GFW 外，VMess+WS+TLS 夠用；主力情境在大陸且常被封，才值得遷
   VLESS+Vision+REALITY（見 [ProtocolEvaluation.md](../ProtocolEvaluation.md) 的觸發點）。
 - **配置**：別把節點/規則寫死，URL 化成 providers + 熱重載，多端共用同一份可自動更新設定。
+  自己 host 這些 URL 的做法（含 Shadowrocket）見 [SelfHostProviders.md](SelfHostProviders.md)。
 
 ## terminal 要用 TUI、編輯檔案、還是 API？
 
