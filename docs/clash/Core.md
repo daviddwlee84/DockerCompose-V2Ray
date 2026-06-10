@@ -68,6 +68,9 @@ proxies:
 
 遷移路徑基本上就是「把核心 binary 從 `clash-core` 換成 mihomo」，設定檔沿用。
 
+> 這裡談的是 **client 核心**。至於 **server 端協議**（VMess 是否仍首選、VLESS+Reality
+> 等替代與 GFW 偵測風險），見 [docs/ProtocolEvaluation.md](../ProtocolEvaluation.md)。
+
 ### 唯一需要注意的 caveat：`alterId`
 
 現有 [`clients/docker/config.yaml`](../../clients/docker/config.yaml) 用 `alterId: 64`，
