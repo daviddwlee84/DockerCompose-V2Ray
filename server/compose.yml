@@ -37,3 +37,89 @@ services:
       - ./runtime/logs/v2ray:/var/log/v2ray
     expose:
       - "30909"
+
+  # --- Observability agent + exporters ---
+  # Reference copy. In the Ansible-rendered compose these services are gated
+  # behind `monitoring_enabled` (see roles/vpn/templates/compose.yml.j2). All are
+  # internal to the compose network (expose:, never ports:). Grafana Alloy scrapes
+  # them locally and ships metrics + logs OUTBOUND to the central obs host; the
+  # endpoint + push credentials live in the generated ./runtime/alloy/config.alloy.
+  v2ray-exporter:
+    image: wi1dcard/v2ray-exporter:master
+    container_name: v2ray-exporter
+    restart: unless-stopped
+    command: ["--v2ray-endpoint", "v2ray:10085"]
+    expose:
+      - "9550"
+    depends_on:
+      - v2ray
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    expose:
+      - "9100"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    command:
+      - "--docker_only=true"
+      - "--housekeeping_interval=30s"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    expose:
+      - "8080"
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-exporter
+    restart: unless-stopped
+    command:
+      - "--nginx.scrape-uri=http://nginx:8081/nginx_status"
+    expose:
+      - "9113"
+    depends_on:
+      - nginx
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    restart: unless-stopped
+    user: root
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
+      - "/etc/alloy/config.alloy"
+    volumes:
+      - ./runtime/alloy:/etc/alloy:ro
+      - ./runtime/logs/nginx:/var/log/nginx:ro
+      - ./runtime/logs/v2ray:/var/log/v2ray:ro
+      - alloy-data:/var/lib/alloy/data
+    expose:
+      - "12345"
+    depends_on:
+      - v2ray-exporter
+      - node-exporter
+      - cadvisor
+      - nginx-exporter
+
+volumes:
+  alloy-data:

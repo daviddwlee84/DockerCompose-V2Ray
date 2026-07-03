@@ -20,6 +20,7 @@
     - "{{ deploy_path }}/runtime/certbot/www"
     - "{{ deploy_path }}/runtime/logs/nginx"
     - "{{ deploy_path }}/runtime/logs/v2ray"
+    - "{{ deploy_path }}/runtime/alloy"
 
 - name: Install logrotate config for nginx + v2ray logs
   ansible.builtin.template:
@@ -61,6 +62,16 @@
     group: "{{ ansible_user }}"
     mode: "0640"
   notify: restart v2ray
+
+- name: Render Grafana Alloy agent config (monitoring)
+  when: monitoring_enabled | bool
+  ansible.builtin.template:
+    src: alloy/config.alloy.j2
+    dest: "{{ deploy_path }}/runtime/alloy/config.alloy"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0640"
+  notify: recreate stack
 
 - name: Check if Let's Encrypt cert already exists
   ansible.builtin.stat:

@@ -1,0 +1,23 @@
+---
+# otel-lgtm all-in-one: Grafana + Prometheus + Loki + Tempo + Pyroscope + OTel
+# Collector. Uses :latest to match the repo's other images (nginx, certbot,
+# v2ray); pin a specific tag here for reproducibility if you prefer.
+obs_lgtm_image: "grafana/otel-lgtm:latest"
+
+# Retention (see docs/OBSERVABILITY.md "Retention & sizing"). Logs are the space
+# hog → shorter; metrics are cheap → longer.
+prometheus_retention: "90d"
+loki_retention: "30d"
+
+# Internal container ports of the otel-lgtm backends (nginx reverse-proxies these).
+obs_grafana_port: 3000
+obs_prometheus_port: 9090
+obs_loki_port: 3100
+
+# Grafana provisioning assets (dashboards + provider yaml) synced to the host.
+obs_grafana_src: "{{ playbook_dir }}/../../server/observability/grafana"
+
+# Let's Encrypt knobs (self-contained here — this role doesn't use the vpn's
+# letsencrypt role). Set le_staging: 1 to hit the staging CA while testing.
+le_rsa_key_size: 4096
+le_staging: 0

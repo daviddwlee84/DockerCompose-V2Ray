@@ -1,0 +1,50 @@
+# Rendered by ansible/roles/observability — edits here are overwritten on next deploy.
+services:
+  otel-lgtm:
+    image: {{ obs_lgtm_image }}
+    container_name: otel-lgtm
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+      - GF_SERVER_ROOT_URL=https://{{ obs_domain }}
+      # Retention + enable the Prometheus remote-write receiver so agents can push.
+      - PROMETHEUS_EXTRA_ARGS=--storage.tsdb.retention.time={{ prometheus_retention }} --web.enable-remote-write-receiver
+      - LOKI_EXTRA_ARGS=--limits.retention-period={{ loki_retention }}
+    volumes:
+      # Persist all backend data (TSDB, Loki chunks, etc.) across recreations.
+      - obs-data:/data
+      # Provisioned dashboards (plug-and-play, $server-templated).
+      - ./runtime/grafana/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/custom.yaml:ro
+      - ./runtime/grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/custom:ro
+    expose:
+      - "{{ obs_grafana_port }}"
+      - "{{ obs_prometheus_port }}"
+      - "{{ obs_loki_port }}"
+
+  nginx:
+    image: nginx:latest
+    container_name: obs-nginx
+    restart: unless-stopped
+    volumes:
+      - ./runtime/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./runtime/nginx/ingest.htpasswd:/etc/nginx/ingest.htpasswd:ro
+      - ./runtime/certbot/conf:/etc/letsencrypt
+      - ./runtime/certbot/www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - otel-lgtm
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    container_name: obs-certbot
+    restart: unless-stopped
+    volumes:
+      - ./runtime/certbot/conf:/etc/letsencrypt
+      - ./runtime/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  obs-data:

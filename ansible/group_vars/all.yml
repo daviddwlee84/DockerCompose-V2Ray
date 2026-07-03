@@ -12,3 +12,23 @@ firewall_allowed_tcp:
   - "{{ ssh_port }}"
   - 80
   - 443
+
+# --- Observability (opt-in, see docs/OBSERVABILITY.md) ---
+# When true, each VPN host also runs a Grafana Alloy agent + local exporters
+# (v2ray-exporter, node-exporter, cadvisor, nginx-exporter) and enables the
+# V2Ray StatsService, shipping metrics + logs OUTBOUND to the central host.
+# No inbound ports are opened — everything egresses over 443.
+monitoring_enabled: false
+
+# Local V2Ray StatsService gRPC API port (dokodemo-door inbound). Internal to
+# the compose network only — never host-published, never in firewall_allowed_tcp.
+v2ray_api_port: 10085
+
+# Label stamped on every metric/log so the Grafana "$server" dashboard dropdown
+# can switch between servers. New host reports → appears in the dropdown.
+monitoring_server_label: "{{ inventory_hostname }}"
+
+# Base URL of the central observability host's nginx front (no trailing slash),
+# e.g. "https://obs.example.com". Empty = agent has nowhere to ship (keep
+# monitoring_enabled false). Agents push to <obs_base_url>/prom and /loki.
+obs_base_url: ""

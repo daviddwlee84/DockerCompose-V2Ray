@@ -1,0 +1,59 @@
+# Truth-source reference for the obs host's nginx front. The Ansible mirror
+# (ansible/roles/observability/templates/nginx/obs.conf.j2) is what actually gets
+# rendered. TLS-terminates ${OBS_DOMAIN} and routes:
+#   /prom/*  → Prometheus remote-write receiver (agents push metrics)  [basic-auth]
+#   /loki/*  → Loki push API (agents push logs)                        [basic-auth]
+#   /*       → Grafana UI (its own login)
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name ${OBS_DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${OBS_DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${OBS_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${OBS_DOMAIN}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location /prom/ {
+        auth_basic "obs-ingest";
+        auth_basic_user_file /etc/nginx/ingest.htpasswd;
+        proxy_pass http://otel-lgtm:9090/;
+        client_max_body_size 32m;
+    }
+
+    location /loki/ {
+        auth_basic "obs-ingest";
+        auth_basic_user_file /etc/nginx/ingest.htpasswd;
+        proxy_pass http://otel-lgtm:3100;
+        client_max_body_size 32m;
+    }
+
+    location / {
+        proxy_pass http://otel-lgtm:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+}

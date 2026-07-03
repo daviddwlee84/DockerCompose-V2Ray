@@ -1,0 +1,53 @@
+// Grafana Alloy — per-VPN-server metrics + log shipper.
+// Rendered by the vpn role (only when monitoring_enabled). Scrapes the local
+// exporters over the compose network, tails the nginx/v2ray log files, stamps a
+// `server` label on everything (drives the Grafana $server dropdown), and pushes
+// OUTBOUND over HTTPS with basic auth to the central observability host. No
+// inbound ports are involved.
+
+// ---------- Metrics: scrape local exporters, remote_write to the central Prometheus ----------
+prometheus.scrape "exporters" {
+  targets = [
+    {"__address__" = "v2ray-exporter:9550", "__metrics_path__" = "/scrape", "job" = "v2ray",    "server" = "{{ monitoring_server_label }}"},
+    {"__address__" = "node-exporter:9100",                                   "job" = "node",     "server" = "{{ monitoring_server_label }}"},
+    {"__address__" = "cadvisor:8080",                                        "job" = "cadvisor", "server" = "{{ monitoring_server_label }}"},
+    {"__address__" = "nginx-exporter:9113",                                  "job" = "nginx",    "server" = "{{ monitoring_server_label }}"},
+  ]
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.obs.receiver]
+}
+
+prometheus.remote_write "obs" {
+  endpoint {
+    url = "{{ obs_base_url }}/prom/api/v1/write"
+    basic_auth {
+      username = "{{ obs_ingest_user }}"
+      password = "{{ obs_ingest_password }}"
+    }
+  }
+}
+
+// ---------- Logs: tail nginx + v2ray files, push to the central Loki ----------
+local.file_match "vpn_logs" {
+  path_targets = [
+    {"__path__" = "/var/log/nginx/*.log", "job" = "nginx", "server" = "{{ monitoring_server_label }}"},
+    {"__path__" = "/var/log/v2ray/*.log", "job" = "v2ray", "server" = "{{ monitoring_server_label }}"},
+  ]
+}
+
+loki.source.file "vpn_logs" {
+  targets    = local.file_match.vpn_logs.targets
+  forward_to = [loki.write.obs.receiver]
+}
+
+loki.write "obs" {
+  endpoint {
+    // nginx proxies /loki/* straight through to Loki (path preserved), and
+    // Loki's native push path is /loki/api/v1/push — hence a single /loki here.
+    url = "{{ obs_base_url }}/loki/api/v1/push"
+    basic_auth {
+      username = "{{ obs_ingest_user }}"
+      password = "{{ obs_ingest_password }}"
+    }
+  }
+}

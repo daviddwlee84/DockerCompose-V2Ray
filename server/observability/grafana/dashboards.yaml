@@ -1,0 +1,16 @@
+# Grafana dashboard provider — mounted into otel-lgtm at
+# /otel-lgtm/grafana/conf/provisioning/dashboards/custom.yaml. Loads every JSON
+# under ./dashboards/ (mounted alongside at .../custom/). New dashboards dropped
+# into server/observability/grafana/dashboards/ appear after the next deploy.
+apiVersion: 1
+providers:
+  - name: vpn-fleet
+    orgId: 1
+    folder: "VPN"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /otel-lgtm/grafana/conf/provisioning/dashboards/custom
+      foldersFromFilesStructure: false

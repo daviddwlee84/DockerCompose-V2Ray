@@ -1,0 +1,14 @@
+{# HTTP-only nginx config used during Let's Encrypt bootstrap for the obs host.
+   Once the real cert exists, obs.conf.j2 replaces this. #}
+server {
+    listen 80;
+    server_name {{ obs_domain }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}

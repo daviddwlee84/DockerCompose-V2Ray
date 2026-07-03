@@ -1,0 +1,15 @@
+---
+# Copy to vault.yml in this directory, fill in real values, then encrypt:
+#   ansible-vault encrypt ansible/group_vars/observability/vault.yml
+# Edit later with: ansible-vault edit ansible/group_vars/observability/vault.yml
+# Vault password file: same one as the VPN vault (e.g. ~/.vault-pass).
+
+vault_obs_domain: obs.example.com
+vault_obs_letsencrypt_email: you@example.com
+vault_grafana_admin_password: "change-me-grafana-admin"
+
+# Shared ingest basic-auth. These two MUST match vault_obs_ingest_user /
+# vault_obs_ingest_password in every VPN host's vault (group_vars/vpn/vault.yml
+# or host_vars/<host>/vault.yml).
+vault_obs_ingest_user: "vpn-agent"
+vault_obs_ingest_password: "change-me-shared-ingest-secret"

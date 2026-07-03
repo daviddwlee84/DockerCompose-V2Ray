@@ -1,0 +1,146 @@
+---
+# Central observability host: renders the otel-lgtm + nginx + certbot stack into
+# {{ deploy_path }} (/opt/obs) and brings it up, using the same two-phase Let's
+# Encrypt bootstrap the VPN stack uses. Self-contained — does NOT depend on the
+# vpn or letsencrypt roles' templates. See docs/OBSERVABILITY.md.
+
+- name: Create obs deploy directory tree
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  loop:
+    - "{{ deploy_path }}"
+    - "{{ deploy_path }}/runtime"
+    - "{{ deploy_path }}/runtime/nginx/conf.d"
+    - "{{ deploy_path }}/runtime/grafana"
+    - "{{ deploy_path }}/runtime/certbot/conf"
+    - "{{ deploy_path }}/runtime/certbot/www"
+
+- name: Sync Grafana provisioning assets (dashboards + provider)
+  ansible.posix.synchronize:
+    src: "{{ obs_grafana_src }}/"
+    dest: "{{ deploy_path }}/runtime/grafana/"
+    delete: true
+    recursive: true
+    private_key: "{{ ansible_private_key_file | default(ansible_ssh_private_key_file) | default(omit) }}"
+  delegate_to: localhost
+  become: false
+
+- name: Render obs compose.yml
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ deploy_path }}/compose.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: recreate obs stack
+
+- name: Render ingest htpasswd
+  ansible.builtin.template:
+    src: nginx/ingest.htpasswd.j2
+    dest: "{{ deploy_path }}/runtime/nginx/ingest.htpasswd"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0640"
+  notify: reload obs nginx
+
+- name: Ensure certbot TLS options file is present
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf
+    dest: "{{ deploy_path }}/runtime/certbot/conf/options-ssl-nginx.conf"
+    mode: "0644"
+    force: false
+
+- name: Ensure DH parameters file is present
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem
+    dest: "{{ deploy_path }}/runtime/certbot/conf/ssl-dhparams.pem"
+    mode: "0644"
+    force: false
+
+- name: Check if obs cert already exists
+  ansible.builtin.stat:
+    path: "{{ deploy_path }}/runtime/certbot/conf/live/{{ obs_domain }}/fullchain.pem"
+  register: obs_cert
+
+- name: Render full obs nginx config (cert present)
+  when: obs_cert.stat.exists
+  ansible.builtin.template:
+    src: nginx/obs.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/obs.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: reload obs nginx
+
+- name: Render ACME-only obs nginx config (first-run bootstrap)
+  when: not obs_cert.stat.exists
+  ansible.builtin.template:
+    src: nginx/acme-only.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/obs.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Bootstrap Let's Encrypt certificate (obs)
+  when: not obs_cert.stat.exists
+  block:
+    - name: Start obs nginx with ACME-only config
+      community.docker.docker_compose_v2:
+        project_src: "{{ deploy_path }}"
+        services:
+          - nginx
+        state: present
+
+    - name: Wait for obs nginx to respond on ACME path
+      ansible.builtin.uri:
+        url: "http://{{ obs_domain }}/.well-known/acme-challenge/healthcheck"
+        status_code: [200, 404]
+      register: obs_acme_probe
+      retries: 15
+      delay: 3
+      until: obs_acme_probe.status in [200, 404]
+
+    - name: Request real certificate from Let's Encrypt (obs)
+      # One line to avoid YAML folded-scalar indentation quirks (see the vpn
+      # letsencrypt role for the same rationale).
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - run
+          - --rm
+          - --entrypoint
+          - >-
+            certbot certonly --webroot -w /var/www/certbot
+            {% if le_staging | int == 1 %}--staging {% endif %}
+            --email {{ letsencrypt_email }} -d {{ obs_domain }}
+            --rsa-key-size {{ le_rsa_key_size }}
+            --agree-tos --non-interactive --no-eff-email
+          - certbot
+        chdir: "{{ deploy_path }}"
+      register: obs_certbot_result
+      changed_when: "'Successfully received certificate' in obs_certbot_result.stdout or 'Certificate not yet due for renewal' in obs_certbot_result.stdout"
+
+    - name: Render full obs nginx config now that cert exists
+      ansible.builtin.template:
+        src: nginx/obs.conf.j2
+        dest: "{{ deploy_path }}/runtime/nginx/conf.d/obs.conf"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+- name: Bring up full obs stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_path }}"
+    state: present
+
+- name: Reload obs nginx after bootstrap
+  ansible.builtin.shell: docker compose exec -T nginx nginx -s reload
+  args:
+    chdir: "{{ deploy_path }}"
+  when: not obs_cert.stat.exists
+  changed_when: true

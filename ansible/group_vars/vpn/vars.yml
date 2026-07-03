@@ -7,3 +7,9 @@
 domain: "{{ vault_domain }}"
 letsencrypt_email: "{{ vault_letsencrypt_email }}"
 v2ray_uuid: "{{ vault_v2ray_uuid }}"
+
+# Basic-auth credentials the monitoring agent uses to push metrics/logs to the
+# central observability host. Must match obs_ingest_user / obs_ingest_password
+# on the [observability] host. Optional — only consulted when monitoring_enabled.
+obs_ingest_user: "{{ vault_obs_ingest_user | default('') }}"
+obs_ingest_password: "{{ vault_obs_ingest_password | default('') }}"

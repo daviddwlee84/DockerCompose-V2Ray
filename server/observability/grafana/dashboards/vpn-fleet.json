@@ -1,0 +1,151 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "tags": ["vpn"],
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "",
+  "title": "VPN Fleet",
+  "uid": "vpn-fleet",
+  "templating": {
+    "list": [
+      {
+        "name": "prometheus",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "name": "loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki",
+        "refresh": 1,
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "name": "server",
+        "label": "Server",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+        "definition": "label_values(node_uname_info, server)",
+        "query": { "qryType": 1, "query": "label_values(node_uname_info, server)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "refresh": 2,
+        "sort": 1,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Servers reporting",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "targets": [
+        { "refId": "A", "expr": "count(count by (server) (node_uname_info{server=~\"$server\"}))" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "V2Ray proxy throughput (inbound)",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum by (server) (rate(v2ray_traffic_downlink_bytes_total{dimension=\"inbound\", server=~\"$server\"}[$__rate_interval]))", "legendFormat": "{{server}} down" },
+        { "refId": "B", "expr": "sum by (server) (rate(v2ray_traffic_uplink_bytes_total{dimension=\"inbound\", server=~\"$server\"}[$__rate_interval]))", "legendFormat": "{{server}} up" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Host CPU used %",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "100 - (avg by (server) (rate(node_cpu_seconds_total{mode=\"idle\", server=~\"$server\"}[$__rate_interval])) * 100)", "legendFormat": "{{server}}" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Host memory used %",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "(1 - (node_memory_MemAvailable_bytes{server=~\"$server\"} / node_memory_MemTotal_bytes{server=~\"$server\"})) * 100", "legendFormat": "{{server}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Host network throughput",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum by (server) (rate(node_network_receive_bytes_total{device!=\"lo\", server=~\"$server\"}[$__rate_interval]))", "legendFormat": "{{server}} rx" },
+        { "refId": "B", "expr": "sum by (server) (rate(node_network_transmit_bytes_total{device!=\"lo\", server=~\"$server\"}[$__rate_interval]))", "legendFormat": "{{server}} tx" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Root disk used %",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\", server=~\"$server\"} / node_filesystem_size_bytes{mountpoint=\"/\", server=~\"$server\"} * 100)", "legendFormat": "{{server}}" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "nginx active connections",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum by (server) (nginx_connections_active{server=~\"$server\"})", "legendFormat": "{{server}} active" },
+        { "refId": "B", "expr": "sum by (server) (rate(nginx_http_requests_total{server=~\"$server\"}[$__rate_interval]))", "legendFormat": "{{server}} req/s" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Per-user V2Ray traffic (downlink)",
+      "datasource": { "type": "prometheus", "uid": "${prometheus}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum by (server, target) (rate(v2ray_traffic_downlink_bytes_total{dimension=\"user\", server=~\"$server\"}[$__rate_interval]))", "legendFormat": "{{server}} / {{target}}" }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "Logs ($server)",
+      "datasource": { "type": "loki", "uid": "${loki}" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "options": { "showTime": true, "wrapLogMessage": true, "dedupStrategy": "none", "sortOrder": "Descending" },
+      "targets": [
+        { "refId": "A", "expr": "{server=~\"$server\"}" }
+      ]
+    }
+  ]
+}

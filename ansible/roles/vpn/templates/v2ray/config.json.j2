@@ -9,12 +9,15 @@
       "port": {{ v2ray_internal_port }},
       "listen": "0.0.0.0",
       "protocol": "vmess",
+      "tag": "proxy",
       "settings": {
         "clients": [
           {
             "id": "{{ v2ray_uuid }}",
             "level": 1,
-            "alterId": 64
+            "alterId": 64{% if monitoring_enabled %},
+            "email": "primary"{% endif %}
+
           }
         ]
       },
@@ -24,12 +27,51 @@
           "path": "{{ v2ray_ws_path }}"
         }
       }
-    }
+    }{% if monitoring_enabled %},
+    {
+      "port": {{ v2ray_api_port }},
+      "listen": "0.0.0.0",
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "127.0.0.1"
+      },
+      "tag": "api"
+    }{% endif %}
+
   ],
   "outbounds": [
     {
       "protocol": "freedom",
       "settings": {}
     }
-  ]
+  ]{% if monitoring_enabled %},
+  "stats": {},
+  "api": {
+    "tag": "api",
+    "services": ["StatsService"]
+  },
+  "policy": {
+    "levels": {
+      "1": {
+        "statsUserUplink": true,
+        "statsUserDownlink": true
+      }
+    },
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true,
+      "statsOutboundUplink": true,
+      "statsOutboundDownlink": true
+    }
+  },
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["api"],
+        "outboundTag": "api"
+      }
+    ]
+  }{% endif %}
+
 }

@@ -9,12 +9,14 @@
       "port": 30909,
       "listen": "0.0.0.0",
       "protocol": "vmess",
+      "tag": "proxy",
       "settings": {
         "clients": [
           {
             "id": "${V2RAY_UUID}",
             "level": 1,
-            "alterId": 64
+            "alterId": 64,
+            "email": "primary"
           }
         ]
       },
@@ -24,6 +26,15 @@
           "path": "${V2RAY_WS_PATH}"
         }
       }
+    },
+    {
+      "port": 10085,
+      "listen": "0.0.0.0",
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "127.0.0.1"
+      },
+      "tag": "api"
     }
   ],
   "outbounds": [
@@ -31,5 +42,33 @@
       "protocol": "freedom",
       "settings": {}
     }
-  ]
+  ],
+  "stats": {},
+  "api": {
+    "tag": "api",
+    "services": ["StatsService"]
+  },
+  "policy": {
+    "levels": {
+      "1": {
+        "statsUserUplink": true,
+        "statsUserDownlink": true
+      }
+    },
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true,
+      "statsOutboundUplink": true,
+      "statsOutboundDownlink": true
+    }
+  },
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["api"],
+        "outboundTag": "api"
+      }
+    ]
+  }
 }

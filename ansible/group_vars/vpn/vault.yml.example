@@ -20,3 +20,8 @@
 vault_domain: your-dns-name.japaneast.cloudapp.azure.com
 vault_letsencrypt_email: you@example.com
 vault_v2ray_uuid: "00000000-0000-0000-0000-000000000000"  # generate with: uuidgen
+
+# Only needed if you set monitoring_enabled: true (see docs/OBSERVABILITY.md).
+# Must match obs_ingest_user / obs_ingest_password on the [observability] host.
+# vault_obs_ingest_user: "vpn-agent"
+# vault_obs_ingest_password: "change-me-shared-ingest-secret"

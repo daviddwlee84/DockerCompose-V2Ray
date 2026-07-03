@@ -41,3 +41,17 @@ server {
         proxy_send_timeout 3600s;
     }
 }
+{%- if monitoring_enabled %}
+
+# Internal-only stub_status surface for nginx-prometheus-exporter. Port 8081 is
+# NOT host-published (compose publishes only 80/443), so this is reachable only
+# from the exporter container over the compose network — never the internet.
+server {
+    listen 8081;
+    server_name _;
+
+    location = /nginx_status {
+        stub_status;
+    }
+}
+{% endif %}

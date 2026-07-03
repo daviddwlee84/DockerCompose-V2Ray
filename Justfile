@@ -101,6 +101,20 @@ logs-nginx:
 ps:
     cd {{ansible_dir}} && ansible vpn -a "docker compose -f /opt/vpn/compose.yml ps"
 
+# --- Central observability host (Grafana LGTM) — see docs/OBSERVABILITY.md ---
+
+# Deploy the central observability stack (common + docker + observability role).
+deploy-obs:
+    cd {{ansible_dir}} && ansible-playbook playbooks/observability.yml {{ansible_opts}}
+
+# Tail the otel-lgtm (Grafana/Prometheus/Loki) container logs on the obs host.
+logs-obs:
+    cd {{ansible_dir}} && ansible observability -a "docker logs --tail 80 otel-lgtm"
+
+# Show compose service status on the obs host.
+ps-obs:
+    cd {{ansible_dir}} && ansible observability -a "docker compose -f /opt/obs/compose.yml ps"
+
 # Edit the encrypted vault for a specific host (or legacy group vault). Usage: just vault-edit [<rg>]
 vault-edit rg="":
     #!/usr/bin/env bash

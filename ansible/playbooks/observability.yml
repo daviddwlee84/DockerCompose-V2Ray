@@ -1,0 +1,9 @@
+---
+- name: Deploy central observability host — Grafana LGTM (Loki/Prometheus/Tempo) + OTel
+  hosts: observability
+  become: true
+  gather_facts: true
+  roles:
+    - common          # OS hardening + UFW (opens 22/80/443, which is what obs needs)
+    - docker          # rootful Docker
+    - observability   # otel-lgtm + nginx + certbot stack under /opt/obs

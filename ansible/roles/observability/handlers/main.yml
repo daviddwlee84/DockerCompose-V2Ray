@@ -1,0 +1,12 @@
+---
+- name: Reload obs nginx
+  community.docker.docker_container_exec:
+    container: obs-nginx
+    command: nginx -s reload
+  listen: reload obs nginx
+
+- name: Recreate obs stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ deploy_path }}"
+    state: present
+  listen: recreate obs stack

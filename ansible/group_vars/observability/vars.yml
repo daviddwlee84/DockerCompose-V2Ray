@@ -1,0 +1,14 @@
+---
+# Central observability host. Its stack lives in a separate deploy path from the
+# VPN stack, so override deploy_path for this group (group_vars > group_vars/all).
+deploy_path: /opt/obs
+
+# Secrets via vault_* indirection (same pattern as group_vars/vpn/vars.yml).
+obs_domain: "{{ vault_obs_domain }}"
+letsencrypt_email: "{{ vault_obs_letsencrypt_email }}"
+grafana_admin_password: "{{ vault_grafana_admin_password }}"
+
+# Basic-auth credentials the VPN agents use to push metrics/logs here. MUST match
+# obs_ingest_user / obs_ingest_password set on the VPN hosts (group_vars/vpn).
+obs_ingest_user: "{{ vault_obs_ingest_user }}"
+obs_ingest_password: "{{ vault_obs_ingest_password }}"
