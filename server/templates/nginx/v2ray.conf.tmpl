@@ -31,5 +31,13 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $http_host;
+
+        # Keep long-lived / idle WebSocket tunnels alive. nginx's default
+        # proxy_read_timeout is 60s, which severs any tunnel with no upstream
+        # data for 60s — e.g. an LLM streaming response that pauses while the
+        # model "thinks", or an idle SSH-over-proxy session → the client sees
+        # "other side closed" at ~60s. Raise well above interactive gaps.
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
     }
 }
