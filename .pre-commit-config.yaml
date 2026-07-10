@@ -11,21 +11,16 @@
 
 repos:
   # Auto-redact secrets in agent artifacts (specstory history + coding-agent
-  # plan dirs) BEFORE gitleaks runs. If the script rewrites any file,
-  # pre-commit reports "files were modified by this hook" and the user must
-  # `git add` + re-commit. Same UX as trailing-whitespace.
+  # plan dirs) BEFORE gitleaks runs. If it rewrites any file, pre-commit
+  # reports "files were modified by this hook" and you `git add` + re-commit.
+  # Same UX as trailing-whitespace.
   #
-  # Script was copied from:
-  #   ~/.local/share/chezmoi/scripts/redact_secrets.py
-  # Keep the two copies roughly in sync if the chezmoi version evolves.
-  - repo: local
+  # Pinned remote hook from daviddwlee84/agent-skills -- bump `rev` (or run
+  # `pre-commit autoupdate`) to pick up upstream fixes. No vendored copy.
+  - repo: https://github.com/daviddwlee84/agent-skills
+    rev: ahh-v1.1.0
     hooks:
       - id: redact-agent-secrets
-        name: Auto-redact secrets in agent artifacts
-        entry: ./scripts/redact_secrets.py --fix
-        language: system
-        pass_filenames: false
-        files: ^(\.specstory/history|\.claude/plans|\.cursor/plans|\.opencode/plans)/.*\.md$
 
   # Gitleaks -- detect secrets (API keys, tokens, PEM keys). Blocks commit
   # when a rule matches. Uses the system-installed gitleaks (brew) so we
