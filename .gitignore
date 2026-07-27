@@ -26,6 +26,18 @@ ansible/host_vars/
 .secrets/
 out/
 
+# mihomo docker client: real config (UUID / Reality keys) plus the binary and
+# geo data fetched by clients/mihomo-docker/fetch-assets.sh. config.example.yaml
+# and both compose files stay tracked.
+clients/mihomo-docker/config.yaml
+clients/mihomo-docker/mihomo
+clients/mihomo-docker/mihomo-linux-*
+clients/mihomo-docker/.assets-version
+clients/mihomo-docker/*.mmdb
+clients/mihomo-docker/*.metadb
+clients/mihomo-docker/geoip.dat
+clients/mihomo-docker/geosite.dat
+
 # test fixtures (local-only)
 test/ssh/id_ed25519
 test/ssh/id_ed25519.pub

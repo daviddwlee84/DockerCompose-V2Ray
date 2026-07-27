@@ -1,17 +1,14 @@
-# Mihomo (Clash Meta) — VLESS Reality capable Docker client.
+# Mihomo (Clash Meta) — VLESS Reality capable Docker client. DEFAULT stack.
+# Uses the official MetaCubeX image. On hosts that cannot reach Docker Hub,
+# use docker-compose.binary.yaml instead (alpine + bind-mounted binary).
+#
 # Side-by-side with legacy Dreamacro Clash (clients/docker): use different host ports.
 #
 # Rootless Docker:
 #   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
 #
-# Binary (air-gapped / no Docker Hub):
-#   curl -fL -o mihomo-linux-amd64.gz \
-#     https://github.com/MetaCubeX/mihomo/releases/download/v1.19.15/mihomo-linux-amd64-v1.19.15.gz
-#   gunzip -f mihomo-linux-amd64.gz && chmod +x mihomo-linux-amd64
-#
 # Config:
 #   cp config.example.yaml config.yaml   # fill UUID / Reality keys
-#   # optional: reuse ../docker/Country.mmdb
 #
 #   docker compose up -d
 #   export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
@@ -19,14 +16,18 @@
 
 services:
   mihomo:
-    image: alpine:latest
+    # Multi-arch (amd64 / arm64 / arm/v7 / 386). Pinned on purpose — :latest
+    # moves on every upstream release. :Alpha tracks the Alpha branch.
+    image: metacubex/mihomo:v1.19.29
     container_name: mihomo
     restart: unless-stopped
-    entrypoint: ["/bin/mihomo", "-d", "/root/.config/mihomo"]
+    # No entrypoint override: the image's ENTRYPOINT is /mihomo and its default
+    # config dir is already /root/.config/mihomo.
+    # No Country.mmdb mount either: the image ships geoip.metadb + geosite.dat
+    # + geoip.dat under that dir (declared as a VOLUME), so GEOIP rules work
+    # out of the box.
     volumes:
-      - ./mihomo-linux-amd64:/bin/mihomo:ro
       - ./config.yaml:/root/.config/mihomo/config.yaml:ro
-      - ./Country.mmdb:/root/.config/mihomo/Country.mmdb:ro
     ports:
       # Mixed HTTP+SOCKS (legacy clash often uses 7892 when both run)
       - "7890:7890"

@@ -1,0 +1,46 @@
+# Mihomo (Clash Meta) — VLESS Reality capable Docker client. FALLBACK stack.
+# Only for hosts where `docker pull metacubex/mihomo` times out (GFW / air-gapped
+# IDC). Everywhere else use docker-compose.yaml, which runs the official image.
+# Alpine is usually already cached locally; the mihomo binary comes from GitHub.
+#
+# Side-by-side with legacy Dreamacro Clash (clients/docker): use different host ports.
+#
+# Rootless Docker:
+#   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+#
+# Assets (./mihomo + ./geoip.metadb) — fetched, not committed:
+#   ./fetch-assets.sh                # latest release, arch from uname -m
+#   ./fetch-assets.sh --arch arm64   # cross-prep for another host
+#
+# Config:
+#   cp config.example.yaml config.yaml   # fill UUID / Reality keys
+#
+#   docker compose -f docker-compose.binary.yaml up -d
+#   export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
+#   curl -x http://127.0.0.1:7890 https://api.ipify.org
+#
+# Caveat vs the official image: bare alpine has no ca-certificates / tzdata.
+# Fine for the current config (Reality pins its own key, DNS is plain UDP), but
+# DoH nameservers or anything validating a public CA chain will need them.
+
+services:
+  mihomo:
+    image: alpine:latest
+    container_name: mihomo
+    restart: unless-stopped
+    entrypoint: ["/bin/mihomo", "-d", "/root/.config/mihomo"]
+    volumes:
+      # Run ./fetch-assets.sh first — a missing path here makes Docker create a
+      # DIRECTORY at it, and mihomo then fails in a confusing way.
+      - ./mihomo:/bin/mihomo:ro
+      # Backs the GEOIP,CN rule. mihomo also accepts Country.mmdb / geoip.db.
+      - ./geoip.metadb:/root/.config/mihomo/geoip.metadb:ro
+      # Only needed once config.yaml grows GEOSITE rules:
+      #   ./fetch-assets.sh --with-geosite
+      # - ./geosite.dat:/root/.config/mihomo/geosite.dat:ro
+      - ./config.yaml:/root/.config/mihomo/config.yaml:ro
+    ports:
+      # Mixed HTTP+SOCKS (legacy clash often uses 7892 when both run)
+      - "7890:7890"
+      # External controller (legacy clash keeps 9090)
+      - "9091:9091"

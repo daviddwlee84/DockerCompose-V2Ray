@@ -17,6 +17,7 @@ Verge Rev / Clash Mi + 協議建議 + terminal 工作流）。各主題細節：
 | 5 | [ConfigManagement.md](ConfigManagement.md) | 系統化 = base 設定瘦身 + 節點/規則 **URL 化（proxy-providers / rule-providers）** + 用 API 熱更新；terminal 改配置 TUI/檔案/API 三選一。 |
 | 5b | [SelfHostProviders.md](SelfHostProviders.md) | **如何自架 provider**：single source of truth（一次維護全 client 套用）、Clash + Shadowrocket 兩格式、URL 的 auth 方法、公開 rule-set（Loyalsoldier / blackmatrix7）與照做方式；對接本專案 nginx。 |
 | 6 | [../ProtocolEvaluation.md](../ProtocolEvaluation.md) | VMess 已非首選；**VLESS+Vision+REALITY** 抗 GFW 最強，含偵測風險排序與選型矩陣。 |
+| 7 | [GeoDB.md](GeoDB.md) | 小科普：`GEOIP,CN` 背後的離線查表檔是什麼、**沒有全球統一版本**（MaxMind → Loyalsoldier → meta-rules-dat 的社群供應鏈），以及官方 image 的 geo data 會隨釘版本一起凍結。 |
 
 ## 與本專案的關係
 
