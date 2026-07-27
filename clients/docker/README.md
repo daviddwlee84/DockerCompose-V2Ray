@@ -1,5 +1,8 @@
 # Use Docker to host Clash
 
+> **VLESS / Reality:** this stack is Dreamacro Clash **v1.18** and cannot terminate VLESS Reality.  
+> Use the mihomo equivalent: [`../mihomo-docker`](../mihomo-docker) (mixed **7890** / API **9091**).
+
 1. Install docker
 
 ```bash

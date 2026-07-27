@@ -1,0 +1,34 @@
+# Mihomo (Clash Meta) — VLESS Reality capable Docker client.
+# Side-by-side with legacy Dreamacro Clash (clients/docker): use different host ports.
+#
+# Rootless Docker:
+#   export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+#
+# Binary (air-gapped / no Docker Hub):
+#   curl -fL -o mihomo-linux-amd64.gz \
+#     https://github.com/MetaCubeX/mihomo/releases/download/v1.19.15/mihomo-linux-amd64-v1.19.15.gz
+#   gunzip -f mihomo-linux-amd64.gz && chmod +x mihomo-linux-amd64
+#
+# Config:
+#   cp config.example.yaml config.yaml   # fill UUID / Reality keys
+#   # optional: reuse ../docker/Country.mmdb
+#
+#   docker compose up -d
+#   export https_proxy=http://127.0.0.1:7890 http_proxy=http://127.0.0.1:7890
+#   curl -x http://127.0.0.1:7890 https://api.ipify.org
+
+services:
+  mihomo:
+    image: alpine:latest
+    container_name: mihomo
+    restart: unless-stopped
+    entrypoint: ["/bin/mihomo", "-d", "/root/.config/mihomo"]
+    volumes:
+      - ./mihomo-linux-amd64:/bin/mihomo:ro
+      - ./config.yaml:/root/.config/mihomo/config.yaml:ro
+      - ./Country.mmdb:/root/.config/mihomo/Country.mmdb:ro
+    ports:
+      # Mixed HTTP+SOCKS (legacy clash often uses 7892 when both run)
+      - "7890:7890"
+      # External controller (legacy clash keeps 9090)
+      - "9091:9091"

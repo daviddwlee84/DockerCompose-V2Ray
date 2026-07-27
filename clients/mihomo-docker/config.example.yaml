@@ -1,0 +1,93 @@
+# Mihomo client example — VLESS Reality (+ optional VMess fallbacks)
+# Copy to config.yaml and replace <PLACEHOLDERS>. Do not commit real secrets.
+
+mixed-port: 7890
+allow-lan: true
+bind-address: "*"
+ipv6: false
+mode: rule
+log-level: info
+
+external-controller: 0.0.0.0:9091
+# secret: "change-me"
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "+.local"
+    - "*.ts.net"
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - 1.1.1.1
+    - 8.8.8.8
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+  nameserver-policy:
+    # AI / Copilot / Claude — avoid polluted CN DNS for overseas APIs
+    "+.anthropic.com": [1.1.1.1, 8.8.8.8]
+    "+.claude.ai": [1.1.1.1, 8.8.8.8]
+    "+.claude.com": [1.1.1.1, 8.8.8.8]
+    "+.githubcopilot.com": [1.1.1.1, 8.8.8.8]
+    "+.githubusercontent.com": [1.1.1.1, 8.8.8.8]
+    "+.openai.com": [1.1.1.1, 8.8.8.8]
+
+proxies:
+  - name: "Az Sg"
+    type: vless
+    server: <SERVER_IP>
+    port: 443
+    uuid: <UUID>
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: support.apple.com
+    reality-opts:
+      public-key: <REALITY_PUBLIC_KEY>
+      short-id: <REALITY_SHORT_ID>
+    client-fingerprint: chrome
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - "Az Sg"
+      - DIRECT
+
+  - name: Final
+    type: select
+    proxies:
+      - PROXY
+      - DIRECT
+
+rules:
+  - DOMAIN-SUFFIX,ts.net,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve
+  # AI / Copilot / Claude (from clash-rules rules/ai.list + proxy github)
+  - DOMAIN-SUFFIX,anthropic.com,PROXY
+  - DOMAIN-SUFFIX,claude.ai,PROXY
+  - DOMAIN-SUFFIX,claude.com,PROXY
+  - DOMAIN-SUFFIX,githubcopilot.com,PROXY
+  - DOMAIN-SUFFIX,copilot.microsoft.com,PROXY
+  - DOMAIN-SUFFIX,githubusercontent.com,PROXY
+  - DOMAIN-KEYWORD,github,PROXY
+  - DOMAIN-SUFFIX,openai.com,PROXY
+  - DOMAIN-SUFFIX,chatgpt.com,PROXY
+  - GEOIP,CN,DIRECT
+  - MATCH,Final
