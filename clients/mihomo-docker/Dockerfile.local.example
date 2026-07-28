@@ -1,0 +1,13 @@
+# Local stand-in for metacubex/mihomo when Docker Hub / CN mirrors return 403
+# and the host has no egress (so `RUN apk add` would hang).
+#
+# Prereq: ./fetch-assets.sh --arch amd64 --version v1.19.29
+#   docker build -f Dockerfile.local.example -t metacubex/mihomo:v1.19.29 .
+#   docker compose up -d
+
+FROM alpine:latest
+COPY mihomo /mihomo
+RUN mkdir -p /root/.config/mihomo
+COPY geoip.metadb /root/.config/mihomo/geoip.metadb
+ENTRYPOINT ["/mihomo"]
+CMD ["-d", "/root/.config/mihomo"]

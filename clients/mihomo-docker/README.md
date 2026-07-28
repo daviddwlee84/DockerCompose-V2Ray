@@ -42,6 +42,50 @@ Tag is pinned deliberately. `:latest` follows each upstream release; `:Alpha`
 tracks the Alpha branch. Upstream publishes to **Docker Hub only** — there is no
 `ghcr.io/metacubex/mihomo`.
 
+## Network notes (GFW / no-egress Docker hosts)
+
+Verified on `ts_nas` (`ta-stg`, Tailscale `100.113.5.112`, rootless Docker) and
+`zyc_friend` (2026-07):
+
+| Symptom | Cause | What works |
+|---------|--------|------------|
+| `docker pull metacubex/mihomo` → **403** via DaoCloud / NJU / … | CN registry mirrors often **do not mirror** this image (HEAD 403). Daemon `registry-mirrors` still routes Hub pulls through them. | Do **not** rely on mirrors for this image. |
+| Host `curl https://…` **FAIL** (no egress) | Same GFW box that needs the proxy | Chicken-and-egg: cannot pull Hub **or** `apk add` during `docker build` until something already proxies. |
+| `alpine:latest` pull **OK** | Popular base images *are* mirrored | Use alpine + local binary (below). |
+| Mac → host `rsync` of 48 MB binary ~10–20 KB/s | Tailscale **relay** RTT | Prefer: Mac → LAN host (`david_ubuntu`) at ~8 MB/s, then host HTTP (`python3 -m http.server`) over Tailscale (~10–20 MB/s) to the target. |
+| `Dockerfile` with `RUN apk add …` hangs forever | Build has no outbound net | Bake a **no-apk** image: `FROM alpine` + `COPY mihomo` + `COPY geoip.metadb` only, tag as `metacubex/mihomo:v1.19.29`, then `docker compose up -d` (same compose file). |
+| Claude API error despite `export HTTPS_PROXY` | Claude Code reads `~/.claude/settings.local.json` **env** over shell | Set `HTTP(S)_PROXY=http://127.0.0.1:7890` there; restart `claude`. |
+
+### Local Hub stand-in (keep `docker-compose.yaml`)
+
+When you want the **default** compose file but cannot pull Hub:
+
+```bash
+# on a machine with GitHub access (e.g. Mac via Verge):
+./fetch-assets.sh --arch amd64 --version v1.19.29
+
+# transfer mihomo + geoip.metadb + config.yaml to the host, then there:
+cat > Dockerfile <<'EOF'
+FROM alpine:latest
+COPY mihomo /mihomo
+RUN mkdir -p /root/.config/mihomo
+COPY geoip.metadb /root/.config/mihomo/geoip.metadb
+ENTRYPOINT ["/mihomo"]
+CMD ["-d", "/root/.config/mihomo"]
+EOF
+docker build -t metacubex/mihomo:v1.19.29 .
+docker compose up -d
+```
+
+Or skip tagging and use `docker compose -f docker-compose.binary.yaml up -d`.
+
+Rootless on these hosts:
+
+```bash
+export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+# ts_nas example: unix:///run/user/2000/docker.sock
+```
+
 ## Fallback: alpine + bind-mounted binary
 
 On GFW / air-gapped IDC hosts, `docker pull metacubex/mihomo` and Docker Hub often
@@ -115,6 +159,6 @@ curl -sS -o /dev/null -w "%{http_code}\n" -x http://127.0.0.1:7890 https://api.g
 |------|--------|
 | macOS | Clash Verge Rev (`verge-mihomo`, mixed **7897**) |
 | Ubuntu desktop | mihomo user systemd (`~/.config/mihomo`, **7890**) |
-| IDC / friend host | **this Docker compose** |
+| `zyc_friend` / `ts_nas` (IDC) | **this Docker compose** (local image or binary fallback) |
 
 Do **not** commit real UUID / Reality keys into this repo.
