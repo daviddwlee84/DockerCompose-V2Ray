@@ -28,3 +28,31 @@ Migration steps (when convenient — no urgency, the box is stable):
 **Caveat**: this VPS also runs other unrelated services alongside the
 `nginx`/`v2ray`/`certbot` stack. They're out of scope for this repo; do not disturb
 them during the migration (the `vpn` compose stack is independent of them).
+
+## Harden `clients/mihomo-docker` (non-DNS leftovers)
+
+The DNS half of this was fixed alongside
+[`pitfalls/browser-cannot-load-google-match-final-bare-ip.md`](pitfalls/browser-cannot-load-google-match-final-bare-ip.md).
+These came out of the same audit and are still open:
+
+1. **Unauthenticated control plane, published on every interface.**
+   `config.example.yaml` has `external-controller: 0.0.0.0:9091` with `secret`
+   commented out, and both compose files publish `9091:9091`. Combined with
+   `allow-lan: true` + `bind-address: "*"` + `7890:7890` and no `authentication:`,
+   anyone on the LAN gets both an open proxy relay and full API control. This is the
+   exact weakness [`docs/clash/API.md`](docs/clash/API.md) already flags. Fix by
+   requiring a `secret`, and publishing as `127.0.0.1:9091:9091` / `127.0.0.1:7890:7890`
+   unless LAN access is actually wanted.
+2. **`cache.db` durability.** Now that `profile.store-fake-ip: true` is set, the
+   config dir must be durable. The official image declares `/root/.config/mihomo` a
+   `VOLUME` (anonymous volume — survives recreate, dies on `down -v`);
+   `docker-compose.binary.yaml` runs bare `alpine:latest` with no volume there at all,
+   so `cache.db` dies on any recreate. Mount a named volume in both.
+3. **Stale "alpine can't do DoH" claim.** `README.md` and
+   `docker-compose.binary.yaml` both say bare alpine lacks `ca-certificates` for DoH
+   nameservers. Verified false — `alpine:latest` ships `ca-certificates-bundle`, which
+   Go's `crypto/x509` reads directly. Left uncorrected it will talk a future operator
+   back into plain UDP:53, which is the whole bug above.
+4. **Rule-order nits.** `DOMAIN-KEYWORD,github,PROXY` sits above `GEOIP,CN`; the
+   `IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve` rule is dead weight under
+   `ipv6: false`.

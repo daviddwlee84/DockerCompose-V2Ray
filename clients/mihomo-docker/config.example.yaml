@@ -11,36 +11,201 @@ log-level: info
 external-controller: 0.0.0.0:9091
 # secret: "change-me"
 
+# ---------------------------------------------------------------------------
+# DNS — see pitfalls/ for the incident this shape came from. Two rules of thumb:
+#   1. never let mihomo's OWN upstream be plain UDP:53 in CN (the GFW forges it,
+#      so mihomo manufactures the poison it is supposed to filter);
+#   2. anything overseas must be reached THROUGH a node, not around it.
 dns:
   enable: true
   ipv6: false
+
+  # This stack has no TUN / redir inbound, so nothing consumes a fake IP yet —
+  # DNS below is used for rule matching (GEOIP,CN) only. Uncomment (and publish
+  # the port in compose) to serve LAN clients, or to debug with
+  #   dig @127.0.0.1 -p 1053 www.google.com
+  # listen: 0.0.0.0:1053
+
   enhanced-mode: fake-ip
+  # Compile-time default. A TUN inet4-address is DERIVED from this — don't change
+  # it if you later add a tun: block.
   fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+
+  # Writing this list REPLACES mihomo's built-in defaults — the first three
+  # entries are those defaults, copied back. Drop them and Windows/NCSI captive
+  # portal probes get a fake IP and the OS reports "no internet".
+  #
+  # '+' matches the apex AND every depth; '*' matches exactly ONE label. So
+  # "*.ts.net" misses every real MagicDNS name (host.tailnet-name.ts.net) and
+  # "*.lan" misses foo.bar.lan. Always use '+'.
   fake-ip-filter:
-    - "*.lan"
-    - "*.local"
+    - dns.msftnsci.com
+    - www.msftnsci.com
+    - www.msftconnecttest.com
+    # LAN / split-DNS — these must return the REAL address
+    - "+.lan"
     - "+.local"
-    - "*.ts.net"
+    - "+.home.arpa"
+    - "+.internal"
+    - localhost
+    # Tailscale MagicDNS
+    - "+.ts.net"
+    # Your own node hostname must never become a fake IP (bootstrap loop).
+    # Uncomment and adjust when proxies[].server is a hostname, not an IP:
+    # - "+.your-vps-domain.com"
+    # Time sync / captive portal probes
+    - "+.pool.ntp.org"
+    - "+.ntp.org"
+    - time.windows.com
+    - captive.apple.com
+
+  # Bootstrap for hostname-form upstreams. Everything below is already a literal
+  # IP, so this should never actually be used — cold start needs zero prior DNS.
+  # Kept as defence in depth. Must be plain IPs.
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
+
+  # Resolves proxies[].server when it is a HOSTNAME. mihomo forces this group to
+  # resolve direct and rule-free, which is what breaks the chicken-and-egg at
+  # startup (node needs DNS -> DNS needs node). Harmless when server: is an IP —
+  # keep it so filling in a hostname later doesn't hang cold start.
+  proxy-server-nameserver:
+    - https://223.5.5.5/dns-query
+    - https://120.53.53.53/dns-query
+
+  # Primary: domestic encrypted DNS, written as literal IPs so there is no
+  # bootstrap hostname at all (120.53.53.53 IS doh.pub). Gives correct CN answers
+  # so GEOIP,CN,DIRECT keeps working. DoH/DoT works on bare alpine too — the base
+  # image ships ca-certificates-bundle, no `apk add` needed.
   nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+    - https://223.5.5.5/dns-query
+    - https://120.53.53.53/dns-query
+    - tls://223.5.5.5:853
+
+  # Fallback: foreign DoH PINNED THROUGH THE PROXY via '#<node-or-group>'.
+  # Unpinned (or plain UDP) it leaves over the poisoned path and defeats itself.
+  # mihomo races this group concurrently and takes the first success, so list a
+  # hard-pinned NODE first — '#PROXY' follows whatever the selector points at,
+  # and this example's PROXY group includes DIRECT.
+  # A typo in a '#name' is NOT a config error: an unknown name is silently
+  # treated as an interface name. Keep these in sync with proxy-groups.
   fallback:
-    - 1.1.1.1
-    - 8.8.8.8
+    - "https://1.1.1.1/dns-query#Az Sg"
+    - "https://8.8.8.8/dns-query#PROXY"
+
+  # Default false fires a proxied fallback query on EVERY cache miss — including
+  # domains that resolve entirely inside CN. Two round trips, and the domestic
+  # domain list leaves the country. true = only query fallback when the domestic
+  # answer looks dirty. Domains in fallback-filter.domain are unaffected.
+  fallback-lazy-query: true
+
+  # Take the fallback answer when the domestic answer isn't a CN IP or lands in a
+  # known poison range.
   fallback-filter:
     geoip: true
     geoip-code: CN
-  nameserver-policy:
-    # AI / Copilot / Claude — avoid polluted CN DNS for overseas APIs
-    "+.anthropic.com": [1.1.1.1, 8.8.8.8]
-    "+.claude.ai": [1.1.1.1, 8.8.8.8]
-    "+.claude.com": [1.1.1.1, 8.8.8.8]
-    "+.githubcopilot.com": [1.1.1.1, 8.8.8.8]
-    "+.githubusercontent.com": [1.1.1.1, 8.8.8.8]
-    "+.openai.com": [1.1.1.1, 8.8.8.8]
+    ipcidr:
+      - 0.0.0.0/8
+      - 240.0.0.0/4
+      # Observed GFW poison ranges (a forged answer rotates between these)
+      - 31.13.64.0/18        # Facebook
+      - 69.171.224.0/19      # Facebook
+      - 157.240.0.0/16       # Facebook
+      - 104.244.42.0/24      # Twitter
+      - 174.132.0.0/16
+      - 185.45.4.0/22
+      # Sinkholes that geolocate to CN — `geoip: true` alone waves these through
+      - 202.106.199.35/32
+      - 202.106.1.2/32
+    # Always resolve these via the proxied fallback (shouldOnlyQueryFallback).
+    # This is the CORRECT way to express "don't trust CN DNS for these" — the old
+    # nameserver-policy pinning them to plain UDP 1.1.1.1 / 8.8.8.8 did the exact
+    # opposite, since those upstreams are the forged ones.
+    domain:
+      - "+.google.com"
+      - "+.googleapis.com"
+      - "+.gstatic.com"
+      - "+.youtube.com"
+      - "+.wikipedia.org"
+      # AI / Copilot / Claude — overseas APIs, never trust a CN answer
+      - "+.github.com"
+      - "+.githubusercontent.com"
+      - "+.githubcopilot.com"
+      - "+.anthropic.com"
+      - "+.claude.ai"
+      - "+.claude.com"
+      - "+.openai.com"
+      - "+.chatgpt.com"
+
+  # nameserver-policy is EXCLUSIVE — a hit NEVER falls through to nameserver /
+  # fallback, and fallback-filter is not applied to it. A dead or poisoned server
+  # here hard-fails that domain (verified: unreachable policy server -> SERVFAIL,
+  # no rescue). Never put plain UDP 1.1.1.1 / 8.8.8.8 here in CN. Use it only for
+  # split-DNS to a resolver you control:
+  # nameserver-policy:
+  #   "+.home.arpa": "192.168.1.1"          # your LAN resolver
+  #   "+.ts.net": "100.100.100.100"         # Tailscale MagicDNS.
+  #     # If you ever set a global `interface-name:`, every DNS dial is bound to
+  #     # that device and this SERVFAILs — write "100.100.100.100#tailscale0"
+  #     # instead (an unknown '#name' is resolved as an interface name).
+
+profile:
+  # Remember the node picked via the API / dashboard across container restarts.
+  # Without it, `PUT /proxies/PROXY` (see README) silently reverts on restart.
+  store-selected: true
+  # MANDATORY with enhanced-mode: fake-ip. Without it the pool is a 1000-entry
+  # in-memory LRU wiped on every restart; a client reconnecting with a stale
+  # 198.18.x.x is then killed by preHandleMetadata with
+  #   fake DNS record 198.18.0.x missing
+  # which happens BEFORE the sniffer runs, so override-destination can't save it.
+  # Needs a writable, DURABLE config dir for cache.db. The official image
+  # declares /root/.config/mihomo as a VOLUME. For docker-compose.binary.yaml
+  # there is no volume there, so add one or cache.db dies with the container:
+  #   volumes:
+  #     - mihomo-cache:/root/.config/mihomo
+  store-fake-ip: true
+
+# ---------------------------------------------------------------------------
+# Sniffer — the net for connections that arrive as a BARE IP (a client that
+# resolved via the system resolver, or dialled an IP literal). Those can't be
+# reverse-mapped to a domain, so no DOMAIN-SUFFIX rule matches and they fall to
+# MATCH,Final and get dialled at whatever (possibly poisoned) IP they carry —
+# the "match Match using Final" signature in the log.
+#
+# It cannot conflict with fake-ip: shouldOverride() only fires when
+# metadata.Host == "", and fake-ip populates Host, so the sniffer never runs on
+# fake-ip traffic.
+sniffer:
+  enable: true
+  # `enable: true` WITHOUT an explicit `sniff:` block is a silent no-op — and
+  # `mihomo -t` still reports success.
+  override-destination: true
+  parse-pure-ip: true
+  sniff:
+    HTTP:
+      ports: [80, 8080, 8880]
+      override-destination: true
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    # Never rewrite your own node's hostname or internal services
+    # - "+.your-vps-domain.com"
+    - "+.home.arpa"
+    - "+.ts.net"
+  skip-dst-address:
+    # MUST cover every target of an `IP-CIDR ...,no-resolve` rule below.
+    # replaceDomain() clears metadata.DstIP under override-destination, so a
+    # no-resolve rule can never match afterwards and is silently skipped.
+    - 127.0.0.0/8
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 100.64.0.0/10          # Tailscale CGNAT
+    - fd7a:115c:a1e0::/48    # Tailscale ULA
 
 proxies:
   - name: "Az Sg"
