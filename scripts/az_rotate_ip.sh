@@ -254,7 +254,7 @@ log "Updated $STATE_FILE (public_ip, rotated_at)"
 # Keep the legacy mirror in sync if it tracks the rotated VM. az_up.sh
 # maintains last-vm.json as a copy-of-current; without this mirror step a
 # rotate would leave the legacy file with the old IP, and any reader still
-# falling back to last-vm.json (e.g. older vmess_client.py invocations)
+# falling back to last-vm.json (e.g. older client_config.py invocations)
 # would hand out stale configs.
 if [ "$STATE_FILE" != "$LEGACY_LAST_VM" ] && [ -f "$LEGACY_LAST_VM" ]; then
     legacy_rg=$(jq -r '.rg // empty' "$LEGACY_LAST_VM" 2>/dev/null || true)

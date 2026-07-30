@@ -1,3 +1,8 @@
+# Reference copy of the deployed stack, in its DEFAULT shape:
+# vpn_protocol: reality → Xray owns 443, nginx keeps 80 for the landing page,
+# and no Let's Encrypt certificate is involved. The Ansible-rendered version
+# (ansible/roles/vpn/templates/compose.yml.j2) also covers the vmess_ws / both
+# modes, where nginx takes 443 (or vmess_ws_port) back and certbot returns.
 services:
   nginx:
     image: nginx:latest
@@ -11,32 +16,25 @@ services:
       - ./runtime/certbot/www:/var/www/certbot
     ports:
       - "80:80"
-      - "443:443"
     links:
-      - v2ray:v2ray
+      - xray:xray
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    restart: unless-stopped
-    volumes:
-      - ./runtime/certbot/conf:/etc/letsencrypt
-      - ./runtime/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-
-  v2ray:
-    image: v2ray/official:latest
-    container_name: v2ray
+  # Distroless image running as uid 65532: no shell inside (`docker logs xray`,
+  # not `exec`). Default CMD is `-confdir /usr/local/etc/xray/`, so the config
+  # mount needs no command override. 443 is published to an unprivileged
+  # in-container port so the non-root user never binds a low port.
+  xray:
+    image: ghcr.io/xtls/xray-core:26.3.27
+    container_name: xray
     environment:
       - TZ=${TZ:-Asia/Shanghai}
     restart: always
-    command: v2ray -config=/etc/v2ray/config.json
     volumes:
-      - ./runtime/v2ray:/etc/v2ray:ro
-      - ./runtime/logs/v2ray:/var/log/v2ray
-    expose:
-      - "30909"
+      - ./runtime/xray:/usr/local/etc/xray:ro
+      - ./runtime/logs/xray:/var/log/xray
+    ports:
+      - "443:8443"
 
   # --- Observability agent + exporters ---
   # Reference copy. In the Ansible-rendered compose these services are gated
@@ -48,11 +46,11 @@ services:
     image: wi1dcard/v2ray-exporter:master
     container_name: v2ray-exporter
     restart: unless-stopped
-    command: ["--v2ray-endpoint", "v2ray:10085"]
+    command: ["--v2ray-endpoint", "xray:10085"]
     expose:
       - "9550"
     depends_on:
-      - v2ray
+      - xray
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -111,7 +109,7 @@ services:
     volumes:
       - ./runtime/alloy:/etc/alloy:ro
       - ./runtime/logs/nginx:/var/log/nginx:ro
-      - ./runtime/logs/v2ray:/var/log/v2ray:ro
+      - ./runtime/logs/xray:/var/log/xray:ro
       - alloy-data:/var/lib/alloy/data
     expose:
       - "12345"

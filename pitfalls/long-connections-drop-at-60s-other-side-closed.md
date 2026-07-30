@@ -38,7 +38,7 @@ long-lived WS connection through nginx.
 
   ```nginx
   location /v2ray {
-      proxy_pass http://v2ray:30909;
+      proxy_pass http://xray:30909;
       proxy_http_version 1.1;
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection "upgrade";
@@ -61,8 +61,13 @@ Add generous timeouts to the WS `location` block. Both the truth-source template
 and the Ansible template must change (they're kept in lockstep — see CLAUDE.md
 "Template / runtime split"):
 
-- `server/templates/nginx/v2ray.conf.tmpl`
-- `ansible/roles/vpn/templates/nginx/v2ray.conf.j2`
+- `server/templates/nginx/ws.conf.tmpl` (was `nginx/v2ray.conf.tmpl` before the
+  2026-07 REALITY migration)
+- `ansible/roles/vpn/templates/nginx/ws.conf.j2` (was `nginx/v2ray.conf.j2`)
+
+Note both are only rendered when `vpn_protocol` is `vmess_ws` or `both`. The
+default `reality` mode has no nginx proxy in the data path at all, so this
+particular 60s cliff cannot occur there — Xray terminates the tunnel itself.
 
 ```nginx
         proxy_set_header Host $http_host;

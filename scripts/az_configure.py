@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = []
+# dependencies = ["cryptography>=42"]
 # ///
 """
 Render ansible inventory + per-host vaults from the Azure VMs provisioned by az_up.sh.
@@ -14,6 +14,9 @@ Writes:
     ansible/inventory/prod.ini                        one [vpn] line per tracked VM
     ansible/host_vars/<rg>/vault.yml                  per-host, ansible-vault encrypted
 
+Each per-host vault gets its own UUID and its own REALITY key material, so
+compromising one node tells you nothing about the others.
+
 Vault password resolution order:
     1. $ANSIBLE_VAULT_PASSWORD_FILE
     2. ~/.vault-pass
@@ -25,7 +28,7 @@ LE email resolution order:
 
 Usage:
     scripts/az_configure.py                # render inventory + vaults for all tracked VMs
-    scripts/az_configure.py --force        # regenerate per-host vaults (new UUIDs); wipe stale host_vars/
+    scripts/az_configure.py --force        # regenerate per-host vaults (new UUIDs + REALITY keys); wipe stale host_vars/
     scripts/az_configure.py --rg <rg>      # limit to a single RG (leaves other vaults/inventory entries alone)
 """
 from __future__ import annotations
@@ -40,6 +43,9 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from reality_keys import keypair as reality_keypair, short_id as reality_short_id  # noqa: E402
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -207,6 +213,42 @@ def vault_is_encrypted(path: Path) -> bool:
     return head.startswith(b"$ANSIBLE_VAULT;")
 
 
+REALITY_VAULT_KEYS = (
+    "vault_reality_private_key",
+    "vault_reality_public_key",
+    "vault_reality_short_id",
+)
+
+
+def warn_if_missing_reality_keys(vault_file: Path, vault_pass_file: Path, rg: str) -> None:
+    """Flag pre-REALITY-migration vaults before the deploy trips over them.
+
+    A vault written before 2026-07 has a domain and a UUID but no REALITY key
+    material. The vpn role asserts on it, but that failure lands minutes later,
+    mid-deploy, one host at a time. Say it here instead — az-configure is where
+    the operator can still act on it.
+    """
+    env = {k: v for k, v in os.environ.items() if k != "ANSIBLE_VAULT_PASSWORD_FILE"}
+    result = subprocess.run(
+        ["ansible-vault", "view", "--vault-password-file", str(vault_pass_file), str(vault_file)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if result.returncode != 0:
+        log(f"  [{rg}] WARN: could not read the existing vault to check for REALITY keys")
+        return
+
+    missing = [k for k in REALITY_VAULT_KEYS if k not in result.stdout]
+    if not missing:
+        return
+
+    log(f"  [{rg}] WARN: vault predates the REALITY migration — missing {', '.join(missing)}.")
+    log(f"  [{rg}]       `just deploy` will fail the vpn role's assert until these exist. Either:")
+    log(f"  [{rg}]         scripts/reality_keys.py --format vault-yaml   # then: just vault-edit {rg}")
+    log(f"  [{rg}]         scripts/az_configure.py --force --rg {rg}     # regenerates UUID too")
+
+
 def write_host_vault(vm: dict, email: str, vault_pass_file: Path, force: bool) -> bool:
     """Write + encrypt ansible/host_vars/<rg>/vault.yml. Returns True if (re)written."""
     host_dir = HOST_VARS_DIR / vm["rg"]
@@ -214,12 +256,15 @@ def write_host_vault(vm: dict, email: str, vault_pass_file: Path, force: bool) -
 
     if vault_is_encrypted(vault_file) and not force:
         log(f"  [{vm['rg']}] vault.yml already encrypted — keeping existing UUID (use --force to rotate)")
+        warn_if_missing_reality_keys(vault_file, vault_pass_file, vm["rg"])
         return False
 
     if not shutil.which("ansible-vault"):
         die("ansible-vault not on PATH — install ansible-core")
 
     v2ray_uuid = str(uuid.uuid4())
+    reality_private, reality_public = reality_keypair()
+    short_id = reality_short_id()
     host_dir.mkdir(parents=True, exist_ok=True)
     plaintext = (
         "---\n"
@@ -227,6 +272,12 @@ def write_host_vault(vm: dict, email: str, vault_pass_file: Path, force: bool) -
         f"vault_domain: {vm['fqdn']}\n"
         f"vault_letsencrypt_email: {email}\n"
         f'vault_v2ray_uuid: "{v2ray_uuid}"\n'
+        "\n"
+        "# REALITY key material (vpn_protocol: reality | both). The UUID above\n"
+        "# doubles as the VLESS client id. See docs/REALITY-MIGRATION.md.\n"
+        f'vault_reality_private_key: "{reality_private}"\n'
+        f'vault_reality_public_key: "{reality_public}"\n'
+        f'vault_reality_short_id: "{short_id}"\n'
     )
     vault_file.write_text(plaintext)
     vault_file.chmod(0o600)
@@ -241,8 +292,13 @@ def write_host_vault(vm: dict, email: str, vault_pass_file: Path, force: bool) -
         env=env,
     )
     log(f"  [{vm['rg']}] wrote + encrypted {vault_file.relative_to(REPO_ROOT)}")
-    log(f"    vault_domain            = {vm['fqdn']}")
-    log(f"    vault_v2ray_uuid        = {v2ray_uuid}")
+    log(f"    vault_domain             = {vm['fqdn']}")
+    log(f"    vault_v2ray_uuid         = {v2ray_uuid}")
+    # Public key and short ID are handed to clients anyway; the private key is
+    # the one thing that must never be echoed into a terminal scrollback.
+    log(f"    vault_reality_public_key = {reality_public}")
+    log(f"    vault_reality_short_id   = {short_id}")
+    log(f"    vault_reality_private_key= (hidden — {len(reality_private)} chars)")
     return True
 
 

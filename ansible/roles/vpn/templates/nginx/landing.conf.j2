@@ -1,0 +1,18 @@
+{# Port-80 landing page. Rendered when vpn_protocol is reality or both — in
+   those modes 443 belongs to Xray/REALITY, so there is deliberately NO
+   `return 301 https://` here: redirecting a browser to 443 would hand it the
+   borrowed dest site's certificate under the wrong hostname and produce a TLS
+   error. Serving plain HTTP on 80 is the honest, quiet option. #}
+server {
+    listen 80 default_server;
+    server_name {{ domain }};
+
+{% if letsencrypt_enabled | bool %}
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+{% endif %}
+    root /usr/share/nginx/html/v2ray;
+    index index.html;
+}

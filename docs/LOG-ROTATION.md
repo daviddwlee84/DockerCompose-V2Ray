@@ -1,7 +1,7 @@
 # Log rotation
 
 Nginx and V2Ray write `access.log` / `error.log` to mounted host directories
-under `/opt/vpn/runtime/logs/{nginx,v2ray}/`. Without rotation they grow
+under `/opt/vpn/runtime/logs/{nginx,xray}/`. Without rotation they grow
 unbounded and eventually fill the root FS (symptom: `No space left on device`
 on `tmux`, `apt`, `docker`, anything).
 
@@ -25,6 +25,7 @@ ssh <user>@<vps>
 # 1. Drop the logrotate config
 sudo tee /etc/logrotate.d/vpn > /dev/null <<'EOF'
 /opt/vpn/runtime/logs/nginx/*.log
+/opt/vpn/runtime/logs/xray/*.log
 /opt/vpn/runtime/logs/v2ray/*.log {
     daily
     rotate 7
@@ -60,7 +61,7 @@ byte-identical to the above — safe to run, no config drift.
 | `rotate 7` | Keep 7 historical files; the 8th is deleted. |
 | `maxsize 20M` | Rotate mid-day if any one file exceeds 20M (protects against burst growth). |
 | `compress` + `delaycompress` | gzip rotated files, but keep `.1` uncompressed one cycle so operators can tail it without `zcat`. |
-| `copytruncate` | Copy the file then truncate the original → inode preserved → nginx/v2ray keep writing to the same FD without reload/signal. |
+| `copytruncate` | Copy the file then truncate the original → inode preserved → nginx/xray keep writing to the same FD without reload/signal. |
 | `missingok` | No error if the path glob is empty (e.g. fresh VPS before first request). |
 | `notifempty` | Skip rotating empty files. |
 
@@ -71,20 +72,24 @@ byte-identical to the above — safe to run, no config drift.
   ```bash
   sudo truncate -s 0 /opt/vpn/runtime/logs/nginx/access.log
   sudo truncate -s 0 /opt/vpn/runtime/logs/nginx/error.log
-  sudo truncate -s 0 /opt/vpn/runtime/logs/v2ray/access.log
-  sudo truncate -s 0 /opt/vpn/runtime/logs/v2ray/error.log
+  sudo truncate -s 0 /opt/vpn/runtime/logs/xray/access.log
+  sudo truncate -s 0 /opt/vpn/runtime/logs/xray/error.log
   ```
   `truncate -s 0` preserves the inode (same as copytruncate) — nginx and
-  v2ray keep writing, current log contents are lost but future writes are
+  xray keep writing, current log contents are lost but future writes are
   fine. Then re-run step 3.
+
+  > The `v2ray/` path is kept in the config above because a host deployed
+  > before the 2026-07 REALITY migration still has logs sitting there. It's
+  > `missingok`, so it costs nothing on a fresh host.
 
 - **`copytruncate` loses mid-copy writes.** A small window between `cp` and
   `truncate` can drop a few log lines. Acceptable for a personal VPN; not
   for anything audited. Alternative (not used here): `postrotate` with
-  `docker kill -s USR1 nginx` and equivalent for v2ray — more moving parts
+  `docker kill -s USR1 nginx` and equivalent for xray — more moving parts
   for no real benefit in this project.
 
-- **`just logs-v2ray` / `just logs-nginx` right after rotation.** These
+- **`just logs-xray` / `just logs-nginx` right after rotation.** These
   `tail -n 50` the live file. Immediately after a rotation the file is
   near-empty, so tail will look quiet — not a bug. Check `access.log.1`
   (uncompressed) or `access.log.2.gz` for recent history:
@@ -94,7 +99,7 @@ byte-identical to the above — safe to run, no config drift.
   ```
 
 - **Docker `logging.options.max-size` would NOT have worked here.** Nginx
-  and v2ray write to files inside the container (not stdout), and the
+  and xray write to files inside the container (not stdout), and the
   host-mounted volume shadows nginx's default `/var/log/nginx → /dev/stdout`
   symlink. The Docker logging driver only captures container stdout/stderr,
   so it would rotate the empty `docker logs` stream while the real files

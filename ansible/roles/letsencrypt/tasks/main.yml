@@ -1,80 +1,93 @@
 ---
-- name: Ensure certbot TLS options file is present
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf
-    dest: "{{ deploy_path }}/runtime/certbot/conf/options-ssl-nginx.conf"
-    mode: "0644"
-    force: false
-
-- name: Ensure DH parameters file is present
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem
-    dest: "{{ deploy_path }}/runtime/certbot/conf/ssl-dhparams.pem"
-    mode: "0644"
-    force: false
-
-- name: Check if real cert exists
-  ansible.builtin.stat:
-    path: "{{ deploy_path }}/runtime/certbot/conf/live/{{ domain }}/fullchain.pem"
-  register: le_real_cert
+# Two jobs, despite the name:
+#   1. Bootstrap a Let's Encrypt certificate — only in the modes that terminate
+#      TLS in nginx (vmess_ws / both). The default `reality` mode presents the
+#      borrowed dest site's certificate, so there is nothing to issue.
+#   2. Bring the compose stack up. This is the only place that does, in every
+#      mode, which is why the whole role still runs unconditionally.
 
 - name: Bootstrap Let's Encrypt certificate
-  when: not le_real_cert.stat.exists
+  when: letsencrypt_enabled | bool
   block:
-    - name: Start nginx with ACME-only config
-      community.docker.docker_compose_v2:
-        project_src: "{{ deploy_path }}"
-        services:
-          - nginx
-        state: present
-
-    - name: Wait for nginx to respond on ACME path
-      ansible.builtin.uri:
-        url: "http://{{ domain }}/.well-known/acme-challenge/healthcheck"
-        status_code: [200, 404]
-      register: acme_probe
-      retries: 15
-      delay: 3
-      until: acme_probe.status in [200, 404]
-
-    - name: Request real certificate from Let's Encrypt
-      # Kept on ONE line to avoid YAML folded-scalar indentation quirks (more-
-      # indented lines would be preserved as literal newlines, which breaks the
-      # quoted --entrypoint argument and docker compose parses it as empty).
-      ansible.builtin.command:
-        argv:
-          - docker
-          - compose
-          - run
-          - --rm
-          - --entrypoint
-          - >-
-            certbot certonly --webroot -w /var/www/certbot
-            {% if le_staging | int == 1 %}--staging {% endif %}
-            --email {{ letsencrypt_email }} -d {{ domain }}
-            --rsa-key-size {{ le_rsa_key_size }}
-            --agree-tos --non-interactive --no-eff-email
-          - certbot
-        chdir: "{{ deploy_path }}"
-      register: certbot_result
-      changed_when: "'Successfully received certificate' in certbot_result.stdout or 'Certificate not yet due for renewal' in certbot_result.stdout"
-
-    - name: Render full nginx config now that cert exists
-      ansible.builtin.template:
-        src: "{{ playbook_dir }}/../roles/vpn/templates/nginx/v2ray.conf.j2"
-        dest: "{{ deploy_path }}/runtime/nginx/conf.d/v2ray.conf"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+    - name: Ensure certbot TLS options file is present
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf
+        dest: "{{ deploy_path }}/runtime/certbot/conf/options-ssl-nginx.conf"
         mode: "0644"
+        force: false
+
+    - name: Ensure DH parameters file is present
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem
+        dest: "{{ deploy_path }}/runtime/certbot/conf/ssl-dhparams.pem"
+        mode: "0644"
+        force: false
+
+    - name: Check if real cert exists
+      ansible.builtin.stat:
+        path: "{{ deploy_path }}/runtime/certbot/conf/live/{{ domain }}/fullchain.pem"
+      register: le_real_cert
+
+    - name: Issue certificate and swap in the full nginx config
+      when: not le_real_cert.stat.exists
+      block:
+        - name: Start nginx with ACME-only config
+          community.docker.docker_compose_v2:
+            project_src: "{{ deploy_path }}"
+            services:
+              - nginx
+            state: present
+
+        - name: Wait for nginx to respond on ACME path
+          ansible.builtin.uri:
+            url: "http://{{ domain }}/.well-known/acme-challenge/healthcheck"
+            status_code: [200, 404]
+          register: acme_probe
+          retries: 15
+          delay: 3
+          until: acme_probe.status in [200, 404]
+
+        - name: Request real certificate from Let's Encrypt
+          # Kept on ONE line to avoid YAML folded-scalar indentation quirks (more-
+          # indented lines would be preserved as literal newlines, which breaks the
+          # quoted --entrypoint argument and docker compose parses it as empty).
+          ansible.builtin.command:
+            argv:
+              - docker
+              - compose
+              - run
+              - --rm
+              - --entrypoint
+              - >-
+                certbot certonly --webroot -w /var/www/certbot
+                {% if le_staging | int == 1 %}--staging {% endif %}
+                --email {{ letsencrypt_email }} -d {{ domain }}
+                --rsa-key-size {{ le_rsa_key_size }}
+                --agree-tos --non-interactive --no-eff-email
+              - certbot
+            chdir: "{{ deploy_path }}"
+          register: certbot_result
+          changed_when: "'Successfully received certificate' in certbot_result.stdout or 'Certificate not yet due for renewal' in certbot_result.stdout"
+
+        - name: Render the real nginx configs now that the cert exists
+          ansible.builtin.include_role:
+            name: vpn
+            tasks_from: nginx_conf
+          vars:
+            nginx_acme_only: false
 
 - name: Bring up full compose stack
   community.docker.docker_compose_v2:
     project_src: "{{ deploy_path }}"
     state: present
 
-- name: Reload nginx after bootstrap
+- name: Reload nginx after cert bootstrap
   ansible.builtin.shell: docker compose exec -T nginx nginx -s reload
   args:
     chdir: "{{ deploy_path }}"
-  when: not le_real_cert.stat.exists
+  when:
+    - letsencrypt_enabled | bool
+    # default(true) = "cert already there" = nothing to reload, which is also
+    # the right answer when the block above never ran and left this unregistered.
+    - not (le_real_cert.stat.exists | default(true))
   changed_when: true

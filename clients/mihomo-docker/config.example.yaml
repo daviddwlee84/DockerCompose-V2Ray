@@ -1,5 +1,7 @@
-# Mihomo client example — VLESS Reality (+ optional VMess fallbacks)
+# Mihomo client example — VLESS Reality (matches this repo's default server)
 # Copy to config.yaml and replace <PLACEHOLDERS>. Do not commit real secrets.
+#
+# `just az-client` generates the proxies: block below pre-filled from the vault.
 
 mixed-port: 7890
 allow-lan: true
@@ -208,6 +210,9 @@ sniffer:
     - fd7a:115c:a1e0::/48    # Tailscale ULA
 
 proxies:
+  # This is the shape this repo's server now serves by default (vpn_protocol:
+  # reality). `just az-client` emits exactly this block with the real values —
+  # copy it in rather than hand-filling the keys.
   - name: "Az Sg"
     type: vless
     server: <SERVER_IP>
@@ -217,6 +222,10 @@ proxies:
     udp: true
     tls: true
     flow: xtls-rprx-vision
+    # BORROWED SNI: the real site REALITY impersonates during the handshake.
+    # It has nothing to do with `server:` above and does not need to resolve to
+    # it. Must match the server's reality_server_names. Because the SNI is
+    # borrowed, `server:` can stay an FQDN and survive a public-IP rotation.
     servername: support.apple.com
     reality-opts:
       public-key: <REALITY_PUBLIC_KEY>

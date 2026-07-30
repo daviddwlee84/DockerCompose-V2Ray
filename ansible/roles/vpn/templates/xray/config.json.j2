@@ -1,0 +1,116 @@
+{#
+  Xray-core server config. Rendered by ansible/roles/vpn.
+
+  Truth-source mirror: server/templates/xray/config.json.tmpl (keep in lockstep).
+
+  The inbound list is BUILT AS DATA and serialised with to_nice_json rather than
+  hand-written with {% if %} around commas. The old VMess template did the
+  latter, so every conditional field needed a comma dangling off the previous
+  line — one wrong branch and Xray refuses to start with a JSON parse error you
+  only ever see in `docker logs`. Building a list can't produce invalid JSON.
+
+  Modes (see vpn_protocol in ansible/group_vars/all.yml):
+    reality   → VLESS + XTLS-Vision + REALITY only
+    vmess_ws  → VMess over WebSocket only (nginx terminates TLS in front)
+    both      → both inbounds, on different ports
+#}
+{% set inbounds = [] %}
+{% if vpn_protocol in ['reality', 'both'] %}
+{%   set _ = inbounds.append({
+       "listen": "0.0.0.0",
+       "port": xray_reality_port | int,
+       "protocol": "vless",
+       "tag": "reality-in",
+       "settings": {
+         "clients": [
+           {
+             "id": v2ray_uuid,
+             "flow": "xtls-rprx-vision",
+             "level": 1,
+             "email": "primary"
+           }
+         ],
+         "decryption": "none"
+       },
+       "streamSettings": {
+         "network": "tcp",
+         "security": "reality",
+         "realitySettings": {
+           "show": false,
+           "dest": reality_dest,
+           "xver": 0,
+           "serverNames": reality_server_names,
+           "privateKey": reality_private_key,
+           "shortIds": [reality_short_id]
+         }
+       }
+     }) %}
+{% endif %}
+{% if vpn_protocol in ['vmess_ws', 'both'] %}
+{#   No alterId key: Xray-core only speaks VMess AEAD. A legacy client
+     configured with alterId > 0 cannot connect — see docs/REALITY-MIGRATION.md. #}
+{%   set _ = inbounds.append({
+       "listen": "0.0.0.0",
+       "port": xray_ws_port | int,
+       "protocol": "vmess",
+       "tag": "ws-in",
+       "settings": {
+         "clients": [
+           {
+             "id": v2ray_uuid,
+             "level": 1,
+             "email": "primary"
+           }
+         ]
+       },
+       "streamSettings": {
+         "network": "ws",
+         "wsSettings": {
+           "path": v2ray_ws_path
+         }
+       }
+     }) %}
+{% endif %}
+{% if monitoring_enabled | bool %}
+{%   set _ = inbounds.append({
+       "listen": "0.0.0.0",
+       "port": v2ray_api_port | int,
+       "protocol": "dokodemo-door",
+       "settings": {"address": "127.0.0.1"},
+       "tag": "api"
+     }) %}
+{% endif %}
+{% set config = {
+     "log": {
+       "access": "/var/log/xray/access.log",
+       "error": "/var/log/xray/error.log",
+       "loglevel": "warning"
+     },
+     "inbounds": inbounds,
+     "outbounds": [
+       {"protocol": "freedom", "tag": "direct", "settings": {}}
+     ]
+   } %}
+{% if monitoring_enabled | bool %}
+{%   set _ = config.update({
+       "stats": {},
+       "api": {"tag": "api", "services": ["StatsService"]},
+       "policy": {
+         "levels": {
+           "1": {"statsUserUplink": true, "statsUserDownlink": true}
+         },
+         "system": {
+           "statsInboundUplink": true,
+           "statsInboundDownlink": true,
+           "statsOutboundUplink": true,
+           "statsOutboundDownlink": true
+         }
+       },
+       "routing": {
+         "rules": [
+           {"type": "field", "inboundTag": ["api"], "outboundTag": "api"}
+         ]
+       }
+     }) %}
+{% endif %}
+{{ config | to_nice_json }}

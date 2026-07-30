@@ -15,19 +15,35 @@ host_vars vault wired up for it), so any template change has to be hand-applied 
 the VPS. This already bit the 2026-07 nginx `proxy_read_timeout` fix — see
 [`pitfalls/long-connections-drop-at-60s-other-side-closed.md`](pitfalls/long-connections-drop-at-60s-other-side-closed.md).
 
+**This got more urgent with the 2026-07 REALITY migration.** That host is still
+running `v2ray/official:latest` — a container image last pushed six years ago —
+with `alterId: 64` (legacy non-AEAD VMess). Both are called out in
+[`docs/ProtocolEvaluation.md`](docs/ProtocolEvaluation.md). None of the new work
+reaches it until this migration happens; the repo default is now
+`vpn_protocol: reality`, but the live box is still on the old stack entirely.
+
 Migration steps (when convenient — no urgency, the box is stable):
 
 1. Create `ansible/inventory/prod.ini` + `ansible/host_vars/<host>/vault.yml`
-   (domain / UUID / LE email) for this host. `just az-configure` can regenerate
-   the inventory from the Azure throwaway flow.
-2. `just deploy` to lay down `/opt/vpn` (compose + runtime configs) fresh.
-3. `DOMAIN=… just verify` — 200 on `/`, 400 on the WS path, valid TLS chain.
-4. Retire the old `~/DockerCompose-V2Ray` clone once the `/opt/vpn` stack is
+   (domain / UUID / LE email / REALITY keys). `just az-configure` can regenerate
+   the inventory from the Azure throwaway flow, and generates REALITY key material
+   automatically; for a hand-built vault use `just reality-keys --format vault-yaml`.
+2. Decide the protocol for the cutover. `vpn_protocol: both` keeps the existing
+   VMess clients alive on `vmess_ws_port` while you move them — but note their
+   `alterId` must become `0` regardless, because Xray-core dropped the legacy
+   variant. See [`docs/REALITY-MIGRATION.md`](docs/REALITY-MIGRATION.md).
+3. `just deploy` to lay down `/opt/vpn` (compose + runtime configs) fresh.
+4. `DOMAIN=… just verify` then `just az-client && just verify-proxy` — the second
+   one is what actually proves traffic flows.
+5. Retire the old `~/DockerCompose-V2Ray` clone once the `/opt/vpn` stack is
    serving.
 
 **Caveat**: this VPS also runs other unrelated services alongside the
-`nginx`/`v2ray`/`certbot` stack. They're out of scope for this repo; do not disturb
+`nginx`/`xray`/`certbot` stack. They're out of scope for this repo; do not disturb
 them during the migration (the `vpn` compose stack is independent of them).
+**Port 443 changes hands** in `reality`/`both` mode — Xray takes it from nginx.
+If any of those unrelated services expects to be served by that nginx on 443,
+deal with it before deploying.
 
 ## Harden `clients/mihomo-docker` (non-DNS leftovers)
 

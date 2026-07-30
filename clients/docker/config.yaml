@@ -42,30 +42,42 @@ external-ui: ui_pages
 # http://localhost:9090/ui/?secret=clash_secret
 
 proxies:
-  # 3-A.
+  # 3-A. Default server protocol since 2026-07: VLESS + XTLS-Vision + REALITY.
+  # `just az-client` emits this block filled in — don't hand-copy the keys.
+  # NOTE: this needs a REALITY-capable core. The frozen Kuingsmile/clash-core
+  # this compose file ships cannot do it — see clients/mihomo-docker/ and
+  # docs/clash/Core.md.
   - name: "Proxy 1"
+    type: vless
+    server: your-dns-name.japaneast.cloudapp.azure.com
+    port: 443
+    uuid: your-uuid
+    network: tcp
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    # Borrowed SNI — the site REALITY impersonates. Unrelated to `server:`.
+    servername: www.apple.com
+    reality-opts:
+      public-key: your-reality-public-key
+      short-id: your-reality-short-id
+    client-fingerprint: chrome
+
+  # 3-B. Legacy VMess over WebSocket — only reachable when the server runs
+  # vpn_protocol: vmess_ws (port 443) or both (port 2053).
+  # alterId MUST be 0: Xray-core dropped legacy non-AEAD VMess, so the old
+  # `alterId: 64` value here could not connect at all.
+  - name: "Proxy 2"
     type: vmess
     server: your-dns-name.japaneast.cloudapp.azure.com
     port: 443
-    uuid: your-v2ray-uuid
-    alterId: 64
+    uuid: your-uuid
+    alterId: 0
     cipher: auto
     udp: false
     tls: true
-    skip-cert-verify: true
-    network: ws
-    ws-opts:
-      path: /v2ray
-
-  # 3-B.
-  - name: "Proxy 2"
-    type: vmess
-    server: your-ip-address
-    port: 80
-    uuid: your-v2ray-uuid
-    alterId: 64
-    cipher: auto
-    udp: false
+    skip-cert-verify: false
+    servername: your-dns-name.japaneast.cloudapp.azure.com
     network: ws
     ws-opts:
       path: /v2ray

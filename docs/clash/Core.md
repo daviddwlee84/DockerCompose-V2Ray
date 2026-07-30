@@ -48,36 +48,40 @@ flowchart TD
 
 ## 對本專案的遷移含義
 
-我們的 server 是 **VMess over WebSocket + TLS**（見根 [`README.md`](../../README.md)）。
-這在 mihomo 上**原樣可用**，proxy 區塊不需要改寫：
+**2026-07 更新**：server 端已遷到 **VLESS + XTLS-Vision + REALITY**
+（見根 [`README.md`](../../README.md) 與 [REALITY-MIGRATION.md](../REALITY-MIGRATION.md)）。
+這把「換成 mihomo」從建議變成**必要**——凍結的 `clash-core` 不支援 REALITY。
 
 ```yaml
 proxies:
   - name: "Proxy 1"
-    type: vmess
+    type: vless
     server: your-dns-name.japaneast.cloudapp.azure.com
     port: 443
-    uuid: your-v2ray-uuid
-    alterId: 0          # ← 見下方 caveat
-    cipher: auto
+    uuid: your-uuid
+    network: tcp
+    udp: true
     tls: true
-    network: ws
-    ws-opts:
-      path: /v2ray
+    flow: xtls-rprx-vision
+    servername: www.apple.com        # 借來的 SNI，與 server: 無關
+    reality-opts:
+      public-key: <REALITY_PUBLIC_KEY>
+      short-id: <REALITY_SHORT_ID>
+    client-fingerprint: chrome
 ```
 
-遷移路徑基本上就是「把核心 binary 從 `clash-core` 換成 mihomo」，設定檔沿用。
+不用手抄——`just az-client` 會直接產出這段（含正確的 key/short-id）。
+完整的 client 範例見 [`clients/mihomo-docker/config.example.yaml`](../../clients/mihomo-docker/config.example.yaml)。
 
-> 這裡談的是 **client 核心**。至於 **server 端協議**（VMess 是否仍首選、VLESS+Reality
-> 等替代與 GFW 偵測風險），見 [docs/ProtocolEvaluation.md](../ProtocolEvaluation.md)。
+> 這裡談的是 **client 核心**。至於 **server 端協議**為何要換（實機稽核、GFW 偵測風險），
+> 見 [docs/ProtocolEvaluation.md](../ProtocolEvaluation.md)。
 
-### 唯一需要注意的 caveat：`alterId`
+### 舊 VMess 設定的 caveat：`alterId`
 
-現有 [`clients/docker/config.yaml`](../../clients/docker/config.yaml) 用 `alterId: 64`，
-這是舊式 VMess（MD5 認證，已淘汰）。新版核心與 server 都建議使用 **VMess AEAD**，
-即 `alterId: 0`。若 server 端 V2Ray 設定為 `alterId: 0`（AEAD），client 也要對齊成 `0`。
-
-> 本次只是研究記錄，不改動現有 client 設定；實際遷移時再一併處理 `alterId` 與核心替換。
+[`clients/docker/config.yaml`](../../clients/docker/config.yaml) 過去用 `alterId: 64`，
+這是舊式 VMess（MD5 認證，已淘汰）。換到 Xray-core 之後這不再只是「建議改」——
+**Xray 完全移除了 `alterId > 0`**，還停在 64 的 client 直接連不上。
+`vpn_protocol: vmess_ws` / `both` 模式下一律用 `alterId: 0`（AEAD）。
 
 ## 「ShellCrash / ShellClash」到底是什麼
 

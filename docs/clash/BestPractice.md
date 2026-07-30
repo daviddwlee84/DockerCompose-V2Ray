@@ -3,15 +3,17 @@
 把前面各篇的結論收斂成一套可直接照抄的組合，回答「來一套 best practice combo」、
 「terminal 怎麼改配置」、「行動端怎麼選」。
 
-這是**推薦組合**，不是本專案現況。**Server 端協議遷移（VLESS/Reality）依
-[CLAUDE.md](../../CLAUDE.md) 目前不在範圍內**——把它列進來是為了畫出「理想型」與
-逃生路線（見 [ProtocolEvaluation.md](../ProtocolEvaluation.md)）。
+**2026-07 更新**：當初寫這份時，server 端協議遷移還被 `CLAUDE.md` 列為不在範圍內，
+所以下表的第一列是「理想型」。那條約束已經解除——**server 端現在就是
+`VLESS + Vision + REALITY`**（見 [ProtocolEvaluation.md](../ProtocolEvaluation.md)
+的實機稽核與 [REALITY-MIGRATION.md](../REALITY-MIGRATION.md)）。這份文件因此從
+「理想型」變成「現況 + client 端待辦」。
 
 ## 推薦組合一覽
 
 | 層 | 推薦 | 為何 |
 |---|---|---|
-| **Server 協議** | `VLESS + XTLS-Vision + REALITY`（Xray-core / sing-box） | 2026 抗 GFW 主動探測最強；本專案現為 VMess+WS+TLS（GFW 外仍堪用） |
+| **Server 協議** | `VLESS + XTLS-Vision + REALITY`（Xray-core） | 2026 抗 GFW 主動探測最強；**本專案 default 現況** |
 | **Client 核心** | **mihomo**（開源、MetaCubeX） | 事實標準、持續維護、協議全（見 [Core.md](Core.md)） |
 | **桌面殼** | **Clash Verge Rev**（開源 GPL-3.0、官方 Releases、內建 mihomo） | 省心、活躍、可從 UI 更新核心 |
 | **行動端** | iOS/Android：**Clash Mi** 或 **FlClash**（皆開源、mihomo） | 避開閉源信任問題（見 [Clients.md](Clients.md)） |
@@ -22,8 +24,8 @@
 ```mermaid
 flowchart LR
   subgraph srv [Server (VPS)]
-    reality["Xray-core<br/>VLESS+Vision+REALITY<br/>(理想型)"]
-    vmess["v2ray VMess+WS+TLS<br/>(本專案現況)"]
+    reality["Xray-core<br/>VLESS+Vision+REALITY<br/>(default)"]
+    vmess["Xray VMess+WS+TLS<br/>(vpn_protocol: vmess_ws)"]
   end
 
   subgraph cli [Client]
@@ -46,8 +48,8 @@ flowchart LR
 - **核心與殼分離、兩端都選開源**：核心看得到你全部流量，固定用開源 mihomo；
   殼也盡量開源（Verge Rev / Clash Mi / FlClash），降低信任成本（見
   [Clients.md](Clients.md) 的「非開源 client 信任問題」）。
-- **協議**：日常在 GFW 外，VMess+WS+TLS 夠用；主力情境在大陸且常被封，才值得遷
-  VLESS+Vision+REALITY（見 [ProtocolEvaluation.md](../ProtocolEvaluation.md) 的觸發點）。
+- **協議**：已遷至 VLESS+Vision+REALITY。需要 CDN 前置、或某台裝置的 app 太舊時，
+  用 `vpn_protocol: vmess_ws` 退回（見 [REALITY-MIGRATION.md](../REALITY-MIGRATION.md)）。
 - **配置**：別把節點/規則寫死，URL 化成 providers + 熱重載，多端共用同一份可自動更新設定。
   自己 host 這些 URL 的做法（含 Shadowrocket）見 [SelfHostProviders.md](SelfHostProviders.md)。
 
@@ -63,17 +65,18 @@ flowchart LR
 
 一句話：**檔案管結構（持久、版本化），TUI/API 管日常切換（即時）。**
 
-## 對本專案的落地建議（不改協議）
+## 對本專案的落地建議
 
-在維持 VMess 的前提下，仍可往這套 best practice 靠攏：
+Server 端（第 5 項）已完成，剩下的都是 client 端：
 
 1. Client 核心從凍結的 `Kuingsmile/clash-core` 升級到 **mihomo**（[Core.md](Core.md)）。
+   REALITY 需要較新的核心，這項已從「建議」變成「必要」。
 2. 桌面改用 **Clash Verge Rev**、行動端用 **Clash Mi / FlClash**。
 3. [`clients/docker/config.yaml`](../../clients/docker/config.yaml) 設 `secret`、
-   `alterId: 0`、隨機 WS path（[API.md](API.md) / [Core.md](Core.md)）。
+   隨機 WS path（[API.md](API.md) / [Core.md](Core.md)）。
 4. 設定 URL 化：節點走 proxy-providers、規則走 rule-providers（[ConfigManagement.md](ConfigManagement.md)）。
-5. Server 協議遷移（VLESS+Reality）僅在 [ProtocolEvaluation.md](../ProtocolEvaluation.md)
-   的觸發點成立時才動。
+5. ~~Server 協議遷移（VLESS+Reality）~~ **已完成（2026-07）** — 見
+   [REALITY-MIGRATION.md](../REALITY-MIGRATION.md)。
 
 ## 參考
 

@@ -9,7 +9,7 @@
 
 ```mermaid
 flowchart TD
-  server["我們的 server<br/>V2Ray VMess + WS + TLS"]
+  server["我們的 server<br/>Xray VLESS + Vision + REALITY"]
 
   subgraph clientside [Client 端]
     core["核心 (core)<br/>mihomo / clash-rs / sing-box / 原版clash"]
@@ -22,7 +22,7 @@ flowchart TD
     dash -->|"API :9090"| core
   end
 
-  core -->|VMess/WS/TLS| server
+  core -->|VLESS/Vision/REALITY| server
 ```
 
 關鍵：**「殼」（GUI/TUI/dashboard）與「核心」是分離的。** 多數現代 GUI 內建或自動下載

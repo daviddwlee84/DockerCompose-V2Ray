@@ -15,7 +15,7 @@ Local Docker "VPS" for validating Ansible connectivity and a subset of the playb
 - **systemd services** — no systemd in the container. `systemctl enable ...` / `systemctl start ...` tasks will fail.
 - **Docker-in-Docker** — no `dockerd` in the container. The `vpn` / `letsencrypt` roles that run `docker compose up` won't work here.
 - **Let's Encrypt bootstrap** — requires real DNS + port 80 reachable from LE's servers.
-- **Actual VMess traffic** — no client, no WebSocket handshake.
+- **Actual proxy traffic** — no client, no REALITY/WebSocket handshake. Use `just verify-proxy` against a real VPS for that.
 
 For full end-to-end validation, stand up a throwaway Ubuntu 22.04/24.04 VM on Azure/GCP/Hetzner ($5/mo, destroy after) and run `just deploy` against it.
 

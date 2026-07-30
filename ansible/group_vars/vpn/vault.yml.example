@@ -21,6 +21,19 @@ vault_domain: your-dns-name.japaneast.cloudapp.azure.com
 vault_letsencrypt_email: you@example.com
 vault_v2ray_uuid: "00000000-0000-0000-0000-000000000000"  # generate with: uuidgen
 
+# REALITY key material — required when vpn_protocol is `reality` or `both`
+# (the default is `reality`). Generate all three with:
+#
+#   scripts/reality_keys.py
+#
+# vault_v2ray_uuid doubles as the VLESS client id; there is no separate UUID.
+# The private key must NEVER leave the vault. The public key + short ID are
+# handed to clients, and are kept here only so client_config.py can emit a
+# complete config from a single vault decryption.
+vault_reality_private_key: "replace-me"
+vault_reality_public_key: "replace-me"
+vault_reality_short_id: "0123abcd"
+
 # Only needed if you set monitoring_enabled: true (see docs/OBSERVABILITY.md).
 # Must match obs_ingest_user / obs_ingest_password on the [observability] host.
 # vault_obs_ingest_user: "vpn-agent"

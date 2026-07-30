@@ -47,3 +47,8 @@ test/ssh/known_hosts
 .DS_Store
 .idea/
 .vscode/
+
+# az_configure.py imports reality_keys.py as a sibling module, so scripts/ now
+# accumulates bytecode.
+__pycache__/
+*.pyc

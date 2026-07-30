@@ -81,17 +81,29 @@ deploy:
 deploy-fast:
     cd {{ansible_dir}} && ansible-playbook playbooks/deploy.yml {{ansible_opts}}
 
-# Rotate V2Ray UUID. Generates a new UUID, deploys it, then remind to update vault.
+# Rotate the VLESS/VMess UUID. Generates a new UUID, deploys it, then remind to update vault.
 rotate-uuid:
     cd {{ansible_dir}} && ansible-playbook playbooks/rotate-uuid.yml -e new_uuid=$(uuidgen) {{ansible_opts}}
 
-# Smoke-test the deployed host. Pass <rg> (or set DOMAIN / RG); zero-arg uses vms/current when unique.
+# Generate REALITY key material (x25519 keypair + short ID) for a hand-managed vault.
+reality-keys *args:
+    scripts/reality_keys.py {{args}}
+
+# Smoke-test the deployed host's front door. Pass <rg> (or set DOMAIN / RG); zero-arg uses vms/current when unique.
 verify *args:
     scripts/verify.sh {{args}}
 
-# Tail v2ray access log over SSH.
-logs-v2ray:
-    cd {{ansible_dir}} && ansible vpn -a "tail -n 50 /opt/vpn/runtime/logs/v2ray/access.log"
+# Prove the tunnel actually carries traffic: runs a throwaway xray client against out/client/xray-client.json.
+verify-proxy *args:
+    scripts/verify_proxy.sh {{args}}
+
+# Tail xray access log over SSH.
+logs-xray:
+    cd {{ansible_dir}} && ansible vpn -a "tail -n 50 /opt/vpn/runtime/logs/xray/access.log"
+
+# Show the xray container log (config/startup errors land here, not in the access log).
+logs-xray-container:
+    cd {{ansible_dir}} && ansible vpn -a "docker logs --tail 50 xray"
 
 # Tail nginx error log over SSH.
 logs-nginx:
@@ -191,9 +203,9 @@ az-up *args:
 az-configure *args:
     scripts/az_configure.py {{args}}
 
-# Generate client configs. Pass <rg> (positional / --rg / RG=) when multiple VMs are tracked.
+# Generate client configs (protocol follows vpn_protocol). Pass <rg> when multiple VMs are tracked.
 az-client *args:
-    scripts/vmess_client.py {{args}}
+    scripts/client_config.py {{args}}
 
 # Tear down a single tracked Azure RG. Pass <rg> (positional / --rg / RG=); defaults to vms/current.
 az-down *args:
@@ -243,7 +255,9 @@ az-cycle:
     export ANSIBLE_VAULT_PASSWORD_FILE="${ANSIBLE_VAULT_PASSWORD_FILE:-$PWD/.secrets/.vault-pass}"
     just deploy
     DOMAIN=$(jq -r .fqdn ".secrets/azure/vms/$RG.json") just verify
-    scripts/vmess_client.py --rg "$RG"
+    scripts/client_config.py --rg "$RG"
+    scripts/verify_proxy.sh "$RG" || echo "[az-cycle] verify-proxy failed — inspect before trusting this node."
+
     echo
     echo "[az-cycle] VM is live (RG=$RG). Test the client config, then press Enter to tear down."
     read -r _

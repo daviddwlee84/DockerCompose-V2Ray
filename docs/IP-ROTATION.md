@@ -1,8 +1,8 @@
 # IP rotation
 
 Rotate the public IP of an Azure VM when the current one has been GFW-banned,
-**without** changing the FQDN, TLS cert, `vault_domain`, or V2Ray UUID. Clients
-keep working with zero reconfiguration.
+**without** changing the FQDN, TLS cert, `vault_domain`, REALITY key material,
+or UUID. Clients keep working with zero reconfiguration.
 
 ## TL;DR
 
@@ -22,8 +22,12 @@ Takes ~30-60 seconds. Run from the **laptop**, never from the VPS (see footguns)
 ## What stays unchanged
 
 - `<dns-label>.<region>.cloudapp.azure.com` FQDN.
-- Let's Encrypt certificate (cert is bound to FQDN, not IP).
-- `vault_domain`, `vault_v2ray_uuid`, any client config you've already handed out.
+- Let's Encrypt certificate, in the modes that use one (cert is bound to FQDN, not IP).
+  In the default `reality` mode there is no cert of ours at all, and the borrowed
+  SNI is independent of the address — so client configs survive a rotation
+  untouched **as long as they name the FQDN rather than the bare IP**.
+- `vault_domain`, `vault_v2ray_uuid`, `vault_reality_*`, any client config you've
+  already handed out.
 - The VM itself, its disk, its `/opt/vpn/runtime/` state, and everything Ansible installed.
 
 ## How it works

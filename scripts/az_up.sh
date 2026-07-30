@@ -17,12 +17,17 @@
 #                    schedule). Default: 1800 (= 02:00 Asia/Shanghai, 03:00
 #                    Asia/Tokyo). Set to 'off' to disable.
 #   AZ_YES           Skip the "estimated cost, proceed?" confirm prompt.
+#   AZ_EXTRA_PORTS   Space-separated extra TCP ports to open in the NSG, on top
+#                    of 22/80/443. Needed for `vpn_protocol: both`, whose legacy
+#                    WebSocket listener sits on vmess_ws_port (default 2053) —
+#                    ufw is handled by the common role, but the cloud firewall
+#                    is not. Example: AZ_EXTRA_PORTS="2053".
 #
 # State layout:
 #   .secrets/azure/vms/<rg>.json      per-VM handoff (primary; supports multi-host).
 #   .secrets/azure/vms/current        symlink → most recently created vms/<rg>.json.
 #   .secrets/azure/last-vm.json       legacy mirror of vms/current, for older readers
-#                                     (scripts/vmess_client.py, docs, az_cycle). Will
+#                                     (scripts/client_config.py, docs, az_cycle). Will
 #                                     be removed once all readers move to vms/current.
 
 set -euo pipefail
@@ -193,6 +198,18 @@ az vm open-port --resource-group "$AZ_RG" --name "$AZ_VM_NAME" \
     --port 80 --priority 310 --output none
 az vm open-port --resource-group "$AZ_RG" --name "$AZ_VM_NAME" \
     --port 443 --priority 320 --output none
+
+# vpn_protocol: both puts the legacy WebSocket listener on a non-standard port;
+# ufw is opened by the common role but the cloud firewall is a separate layer.
+if [ -n "${AZ_EXTRA_PORTS:-}" ]; then
+    extra_priority=330
+    for port in $AZ_EXTRA_PORTS; do
+        log "Opening extra NSG port ${port}..."
+        az vm open-port --resource-group "$AZ_RG" --name "$AZ_VM_NAME" \
+            --port "$port" --priority "$extra_priority" --output none
+        extra_priority=$((extra_priority + 10))
+    done
+fi
 
 # Safety net for forgotten VMs. Uses the built-in DevTest Labs auto-shutdown
 # schedule, so it keeps running even if az_down.sh never gets called.

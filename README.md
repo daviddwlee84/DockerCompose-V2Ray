@@ -1,6 +1,8 @@
 # DockerCompose-V2Ray
 
-A personal V2Ray (VMess over WebSocket) VPN server, deployed via Ansible. Nginx reverse proxy terminates TLS (Let's Encrypt, auto-renewing) and forwards WebSocket traffic to V2Ray.
+A personal VPN server, deployed via Ansible. The default protocol is **VLESS + XTLS-Vision + REALITY** on Xray-core: Xray owns port 443 and borrows its TLS handshake from a real site, so an unauthenticated prober is transparently forwarded to that site and there is no certificate of ours to fingerprint. nginx keeps port 80 for a landing page.
+
+The previous **VMess over WebSocket + TLS** stack (nginx terminating Let's Encrypt TLS) is still available as `vpn_protocol: vmess_ws`, and `both` runs them side by side during a migration. See [`docs/ProtocolEvaluation.md`](docs/ProtocolEvaluation.md) for why the default changed and [`docs/REALITY-MIGRATION.md`](docs/REALITY-MIGRATION.md) for how to operate it.
 
 ## Deploy
 
@@ -22,17 +24,19 @@ just setup                                                    # installs ansible
 cp ansible/inventory/prod.ini.example ansible/inventory/prod.ini
 $EDITOR ansible/inventory/prod.ini                            # fill in your host
 cp ansible/group_vars/vpn/vault.yml.example ansible/group_vars/vpn/vault.yml
-$EDITOR ansible/group_vars/vpn/vault.yml                      # fill domain, email, uuid
+just reality-keys --format vault-yaml                         # generates the REALITY keypair + short ID
+$EDITOR ansible/group_vars/vpn/vault.yml                      # fill domain, email, uuid, REALITY keys
 just vault-encrypt
 echo 'your-vault-password' > ~/.vault-pass && chmod 600 ~/.vault-pass
 export ANSIBLE_VAULT_PASSWORD_FILE=~/.vault-pass
 
 # Deploy:
 just deploy                                                   # ~5 min first run
-DOMAIN=your.domain.tld just verify                            # smoke-test
+DOMAIN=your.domain.tld just verify                            # front-door smoke test
+just az-client && just verify-proxy                           # end-to-end: does traffic actually flow
 ```
 
-What `just deploy` does: installs rootful Docker, hardens the OS (ufw, fail2ban, unattended-upgrades, timezone), renders server configs from Jinja2 templates + vault secrets, bootstraps Let's Encrypt via HTTP-01, and brings up the Docker Compose stack.
+What `just deploy` does: installs rootful Docker, hardens the OS (ufw, fail2ban, unattended-upgrades, timezone), renders server configs from Jinja2 templates + vault secrets, bootstraps Let's Encrypt via HTTP-01 (only in the `vmess_ws` / `both` modes — REALITY needs no certificate of ours), and brings up the Docker Compose stack.
 
 Re-deploy after config edits: `just deploy-fast` (skips OS/Docker steps, just re-renders configs and reloads services). Rotate the UUID: `just rotate-uuid`.
 
@@ -46,11 +50,11 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 |---|---|
 | `server/` | Everything that ends up on the VPS: `compose.yml`, `templates/` (source-of-truth configs with placeholders), `static/` (landing page), `runtime/` (generated at deploy time, gitignored). |
 | `ansible/` | Playbooks, roles (`common`, `docker`, `vpn`, `letsencrypt`), inventory, vault. |
-| `scripts/` | `install_docker.sh` (rootful bootstrap), `verify.sh` (smoke test). |
-| `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `rotate-uuid`, `verify`, `logs-*`, `vault-edit`. |
+| `scripts/` | `install_docker.sh` (rootful bootstrap), `reality_keys.py` (x25519 keypair + short ID), `client_config.py` (client configs), `verify.sh` (front-door smoke test), `verify_proxy.sh` (end-to-end tunnel test). |
+| `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `reality-keys`, `rotate-uuid`, `verify`, `verify-proxy`, `logs-*`, `vault-edit`. |
 | `clients/cli/` | CLI Clash client setup for Linux. |
 | `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
-| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `ProtocolEvaluation.md` (is VMess still the pick? VLESS/Reality/Hysteria2/etc. compared, with GFW detection risk), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LOG-ROTATION.md` (logrotate config + manual patch recipe for a running VPS), `OBSERVABILITY.md` (optional central Grafana LGTM for a fleet — outbound metrics + logs, a `$server` plug-and-play dashboard, and the V2Ray StatsService as the one server-side tuning knob), `clash/` (client-side research notes: a recommended best-practice combo, mihomo vs current core, observability via Grafana/LGTM, the 9090 RESTful API, the client landscape incl. mobile, systematic config management, and how to self-host node/rule providers for Clash + Shadowrocket), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
+| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `ProtocolEvaluation.md` (why the default moved off VMess: an audit of what this repo actually shipped, plus VLESS/Reality/Hysteria2/etc. compared with GFW detection risk), `REALITY-MIGRATION.md` (the three `vpn_protocol` modes, key material, picking a `dest`, the pitfalls, rollback), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LOG-ROTATION.md` (logrotate config + manual patch recipe for a running VPS), `OBSERVABILITY.md` (optional central Grafana LGTM for a fleet — outbound metrics + logs, a `$server` plug-and-play dashboard, and the Xray StatsService as the one server-side tuning knob), `clash/` (client-side research notes: a recommended best-practice combo, mihomo vs current core, observability via Grafana/LGTM, the 9090 RESTful API, the client landscape incl. mobile, systematic config management, and how to self-host node/rule providers for Clash + Shadowrocket), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
 | `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
 
 ## One-shot Azure validation (throwaway VM)
@@ -68,7 +72,8 @@ just az-up            # preview cost, create RG + B2ats_v2 VM + NSG (22/80/443) 
 just az-configure     # render inventory/prod.ini + per-host host_vars/<rg>/vault.yml
 just deploy           # existing ansible flow (common + docker + vpn + letsencrypt)
 just verify           # with exactly one tracked VM; else RG=<rg> just verify
-just az-client        # emit out/client/{vmess.txt,config.json,clash.yaml,human.md,qr.png}
+just az-client        # emit out/client/{vless.txt,xray-client.json,clash.yaml,human.md,qr.png}
+just verify-proxy     # dial the node with a real xray client and confirm traffic flows
 just az-rotate-ip     # rotate the public IP, keep the FQDN (use when GFW-banned; see docs/IP-ROTATION.md)
 just az-down -y       # delete the RG (-y skips the type-the-name confirm)
 
@@ -119,28 +124,46 @@ failed to provision cleanly but is still reachable).
 
 ## Client setup
 
-### VMess client config (Shadowrocket, v2rayN, etc.)
+Don't hand-copy fields — `just az-client` (or `scripts/client_config.py`) reads the vault and
+emits ready-to-import configs for whatever `vpn_protocol` is deployed:
+a `vless://` URL, an `xray-client.json`, a mihomo `clash.yaml`, a QR PNG and a field table.
 
-- Address: your domain
+### VLESS + REALITY (default) — Shadowrocket, v2rayN, v2rayNG, mihomo
+
+- Address: your domain — **keep the FQDN**, not the bare IP, so `just az-rotate-ip` doesn't invalidate the config
 - Port: `443`
-- UUID: whatever you set as `vault_v2ray_uuid`. **Generate with `uuidgen`; do not reuse any example value from this repo.**
-- AlterId: `64`
-- Security: `auto`
-- TLS: enabled (allow-insecure only if you're using a staging cert while iterating)
-- Transport: WebSocket, path `/v2ray`
+- UUID: `vault_v2ray_uuid`. **Generate with `uuidgen`; do not reuse any example value from this repo.**
+- Flow: `xtls-rprx-vision`
+- Network: `tcp`, Security: `reality`
+- SNI / servername: `reality_server_names[0]` (default `www.apple.com`) — **borrowed**, unrelated to the address you dial
+- Public key / short ID: `vault_reality_public_key` / `vault_reality_short_id`
+- Client fingerprint: `chrome`
+
+### VMess over WebSocket (`vpn_protocol: vmess_ws` / `both`)
+
+Same as before with one hard requirement: **AlterId must be `0`.** Xray-core dropped legacy
+non-AEAD VMess, so a client still set to `64` cannot connect at all. In `both` mode the WS
+listener is on `vmess_ws_port` (default `2053`), not 443.
 
 ### Clash (Windows, macOS, Linux)
 
-See [`clients/docker/config.yaml`](clients/docker/config.yaml) for a working Clash config — edit `server:` and `uuid:` to point at your deploy. For a containerized local proxy + YACD dashboard, see [`clients/docker/README.md`](clients/docker/README.md). For a Linux CLI-only setup, see [`clients/cli/README.md`](clients/cli/README.md).
+For mihomo, see [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its
+`config.example.yaml` already carries a VLESS+REALITY proxy in the right shape. The older
+Clash setup lives in [`clients/docker/README.md`](clients/docker/README.md), and a Linux
+CLI-only setup in [`clients/cli/README.md`](clients/cli/README.md).
 
 ## Troubleshooting
 
-- **Ports 80/443 not open at cloud firewall** → certbot bootstrap stalls at the HTTP-01 challenge. Open them first, then `just deploy` again (idempotent).
-- **`502 Bad Gateway` at `https://$DOMAIN/v2ray`** → V2Ray container isn't running or nginx can't reach it. `just logs-v2ray` and `just ps`.
-- **`400 Bad Request` at `https://$DOMAIN/v2ray` in a browser** → expected. V2Ray rejects non-WebSocket GETs on that path; clients handshake correctly.
+- **Browser shows a TLS error on `https://$DOMAIN/`** → expected in `reality` mode. Your hostname isn't in `serverNames`, so the connection is forwarded to `reality_dest` and you get *its* certificate under the wrong name. `just verify` asserts this on purpose.
+- **Ports 80/443 not open at cloud firewall** → nothing reachable; in `vmess_ws`/`both` the certbot bootstrap also stalls at the HTTP-01 challenge. Open them first, then `just deploy` again (idempotent). In `both` mode also open `vmess_ws_port`.
+- **Deploy fails with "needs vault_reality_private_key …"** → the host's vault predates the REALITY migration. `just reality-keys --format vault-yaml` then `just vault-edit <rg>`, or `scripts/az_configure.py --force --rg <rg>`.
+- **Xray container restarts on loop** → `just logs-xray-container`. The image is distroless, so `docker compose exec xray sh` does not exist; config and permission errors only surface in `docker logs`.
+- **Old client stopped working after the upgrade** → it's probably pinned to `alterId: 64`. Xray-core only speaks VMess AEAD. Re-import from `just az-client`.
+- **`502 Bad Gateway` at the WebSocket path** (`vmess_ws`/`both`) → Xray isn't running or nginx can't reach it. `just logs-xray-container` and `just ps`.
+- **`400 Bad Request` at the WebSocket path in a browser** → expected. Xray rejects non-WebSocket GETs on that path; clients handshake correctly.
 - **`cannot expose privileged port 80` during docker install** → you're in rootless mode. This project uses rootful Docker (`ansible/roles/docker/` and `scripts/install_docker.sh`). Reinstall fresh.
-- **Cert stuck as dummy / self-signed** → LE bootstrap failed partway. Delete `/opt/vpn/runtime/certbot/conf/live/<domain>/` on the VPS and re-run `just deploy`. The role detects missing cert and re-bootstraps.
-- **Client connects but no traffic flows** → `just logs-v2ray` for inbound traces; confirm client UUID matches `vault_v2ray_uuid`.
+- **Cert stuck as dummy / self-signed** (`vmess_ws`/`both`) → LE bootstrap failed partway. Delete `/opt/vpn/runtime/certbot/conf/live/<domain>/` on the VPS and re-run `just deploy`. The role detects missing cert and re-bootstraps.
+- **Client connects but no traffic flows** → `just verify-proxy` to isolate client vs server, then `just logs-xray` for inbound traces; confirm the client UUID, public key and short ID all match the vault.
 
 ## License
 

@@ -1,14 +1,25 @@
-{# HTTP-only nginx config used during Let's Encrypt bootstrap.
-   Once the real cert exists, v2ray.conf.j2 replaces this. #}
+{# HTTP-only nginx config used during Let's Encrypt bootstrap, before the
+   certificate that ws.conf.j2 references exists. Replaced by landing.conf /
+   ws.conf once certbot succeeds.
+
+   Only reachable in modes that need a certificate at all (vmess_ws, both) —
+   `reality` never runs this. #}
 server {
-    listen 80;
+    listen 80 default_server;
     server_name {{ domain }};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
 
+{% if vpn_protocol == 'vmess_ws' %}
     location / {
         return 301 https://$host$request_uri;
     }
+{% else %}
+{#  `both` mode: 443 is Xray/REALITY, so a redirect there would land the browser
+    on the borrowed certificate. Serve the landing page instead. #}
+    root /usr/share/nginx/html/v2ray;
+    index index.html;
+{% endif %}
 }

@@ -1,4 +1,9 @@
 # Rendered by ansible/roles/vpn — edits here are overwritten on next deploy.
+#
+# Port 443 belongs to exactly one service, decided by vpn_protocol:
+#   reality / both → xray (REALITY must own 443 to transparently forward
+#                    unauthenticated probes to reality_dest)
+#   vmess_ws       → nginx (terminates TLS, proxies the WS path to xray)
 services:
   nginx:
     image: nginx:latest
@@ -12,10 +17,17 @@ services:
       - ./runtime/certbot/www:/var/www/certbot
     ports:
       - "80:80"
+{% if vpn_protocol == 'vmess_ws' %}
       - "443:443"
+{% elif vpn_protocol == 'both' %}
+      - "{{ vmess_ws_port }}:{{ vmess_ws_port }}"
+{% endif %}
+{% if vpn_protocol in ['vmess_ws', 'both'] %}
     links:
-      - v2ray:v2ray
+      - xray:xray
+{% endif %}
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+{% if letsencrypt_enabled | bool %}
 
   certbot:
     image: certbot/certbot
@@ -25,19 +37,33 @@ services:
       - ./runtime/certbot/conf:/etc/letsencrypt
       - ./runtime/certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+{% endif %}
 
-  v2ray:
-    image: v2ray/official:latest
-    container_name: v2ray
+  # Xray-core. The image is distroless and runs as uid 65532 — there is no
+  # shell inside, so `docker compose exec xray sh` will not work; use
+  # `docker logs xray`. Its default CMD is `-confdir /usr/local/etc/xray/`,
+  # which is exactly where the config is mounted, so no command override.
+  #
+  # 443 is published to an unprivileged in-container port rather than to 443
+  # directly: as a non-root user, binding a low port would depend on Docker's
+  # net.ipv4.ip_unprivileged_port_start default. This sidesteps that.
+  xray:
+    image: {{ xray_image }}
+    container_name: xray
     environment:
       - TZ={{ tz }}
     restart: always
-    command: v2ray -config=/etc/v2ray/config.json
     volumes:
-      - ./runtime/v2ray:/etc/v2ray:ro
-      - ./runtime/logs/v2ray:/var/log/v2ray
+      - ./runtime/xray:/usr/local/etc/xray:ro
+      - ./runtime/logs/xray:/var/log/xray
+{% if vpn_protocol in ['reality', 'both'] %}
+    ports:
+      - "443:{{ xray_reality_port }}"
+{% endif %}
+{% if vpn_protocol in ['vmess_ws', 'both'] %}
     expose:
-      - "{{ v2ray_internal_port }}"
+      - "{{ xray_ws_port }}"
+{% endif %}
 {%- if monitoring_enabled %}
 
   # --- Observability agent + exporters (rendered only when monitoring_enabled) ---
@@ -47,11 +73,11 @@ services:
     image: wi1dcard/v2ray-exporter:master
     container_name: v2ray-exporter
     restart: unless-stopped
-    command: ["--v2ray-endpoint", "v2ray:{{ v2ray_api_port }}"]
+    command: ["--v2ray-endpoint", "xray:{{ v2ray_api_port }}"]
     expose:
       - "9550"
     depends_on:
-      - v2ray
+      - xray
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -101,7 +127,7 @@ services:
     image: grafana/alloy:latest
     container_name: alloy
     restart: unless-stopped
-    # Root so it can read the root-owned nginx/v2ray log files it tails.
+    # Root so it can read the root-owned nginx / uid-65532-owned xray log files.
     user: root
     command:
       - "run"
@@ -111,7 +137,7 @@ services:
     volumes:
       - ./runtime/alloy:/etc/alloy:ro
       - ./runtime/logs/nginx:/var/log/nginx:ro
-      - ./runtime/logs/v2ray:/var/log/v2ray:ro
+      - ./runtime/logs/xray:/var/log/xray:ro
       - alloy-data:/var/lib/alloy/data
     expose:
       - "12345"

@@ -30,7 +30,7 @@ flowchart LR
   `<rg>.json`. Drives the default target for `just az-client`, `just verify`
   and `just az-rotate-ip` **when exactly one VM is tracked**.
 - `.secrets/azure/last-vm.json` — legacy mirror kept around for one release
-  cycle so `vmess_client.py` and the old one-liners in this README still
+  cycle so `client_config.py` and the old one-liners in this README still
   work. Safe to delete once all consumers move to `vms/`.
 - `ansible/host_vars/<rg>/vault.yml` — encrypted per-host secrets
   (`vault_domain`, `vault_letsencrypt_email`, `vault_v2ray_uuid`). Written by

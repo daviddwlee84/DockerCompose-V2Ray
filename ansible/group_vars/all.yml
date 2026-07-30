@@ -3,24 +3,73 @@
 
 tz: Asia/Shanghai
 deploy_path: /opt/vpn
-v2ray_ws_path: /v2ray
-v2ray_internal_port: 30909
 ssh_port: 22
 
+# --- Protocol / inbound topology (see docs/REALITY-MIGRATION.md) ---
+#
+# Which inbound stack to deploy. REALITY has to OWN port 443 — its whole point
+# is that an unauthenticated prober gets transparently forwarded to the real
+# reality_dest site — so it cannot share 443 with nginx. Hence a three-way
+# switch rather than "run both on 443":
+#
+#   reality   Xray on 443, VLESS + XTLS-Vision + REALITY. nginx keeps port 80
+#             for the landing page. No Let's Encrypt cert involved at all.
+#   vmess_ws  Legacy: nginx terminates TLS on 443 and proxies the WebSocket
+#             path to a VMess inbound. This is the pre-2026-07 behaviour.
+#   both      REALITY on 443 AND the legacy VMess/WS listener on
+#             vmess_ws_port. Transitional — lets existing clients keep working
+#             while you move them over. Needs vmess_ws_port open at the cloud
+#             firewall too (az_up.sh only opens 22/80/443).
+vpn_protocol: reality
+
+# The real site REALITY borrows its TLS handshake from. Requirements: TLS 1.3 +
+# HTTP/2, no redirect away from the hostname, and geographically close to the
+# VPS (its latency is added to every handshake). serverNames must match what
+# dest actually serves. See docs/REALITY-MIGRATION.md for alternatives.
+reality_dest: "www.apple.com:443"
+reality_server_names:
+  - "www.apple.com"
+
+# uTLS fingerprint written into generated CLIENT configs. Server ignores it.
+reality_client_fingerprint: chrome
+
+# Pinned rather than :latest — a silent core upgrade can change protocol
+# behaviour. 26.3.27 == :latest as of 2026-07. Bump deliberately.
+xray_image: "ghcr.io/xtls/xray-core:26.3.27"
+
+# Port Xray listens on INSIDE the container for the REALITY inbound, published
+# as host 443. The image runs as uid 65532 (nonroot), so binding a privileged
+# port in-container would depend on Docker's ip_unprivileged_port_start default.
+# Publishing 443:8443 sidesteps that entirely.
+xray_reality_port: 8443
+
+# Internal port of the VMess/WebSocket inbound (nginx proxies to it). Never
+# host-published.
+xray_ws_port: 30909
+
+# Host port nginx serves the legacy WebSocket listener on when
+# vpn_protocol == both (443 belongs to Xray in that mode). Ignored otherwise —
+# vmess_ws mode puts it back on 443. 2053 is a recognised alt-HTTPS port, so it
+# looks less odd to a scanner than a random high port.
+vmess_ws_port: 2053
+
+v2ray_ws_path: /v2ray
+
+# Let's Encrypt is only needed when nginx has to terminate TLS for the legacy
+# WebSocket listener. REALITY presents the borrowed site's certificate, not ours.
+letsencrypt_enabled: "{{ vpn_protocol in ['vmess_ws', 'both'] }}"
+
 # Firewall ports opened by the common role.
-firewall_allowed_tcp:
-  - "{{ ssh_port }}"
-  - 80
-  - 443
+firewall_allowed_tcp: "{{ [ssh_port, 80, 443] + ([vmess_ws_port] if vpn_protocol == 'both' else []) }}"
 
 # --- Observability (opt-in, see docs/OBSERVABILITY.md) ---
 # When true, each VPN host also runs a Grafana Alloy agent + local exporters
 # (v2ray-exporter, node-exporter, cadvisor, nginx-exporter) and enables the
-# V2Ray StatsService, shipping metrics + logs OUTBOUND to the central host.
+# Xray StatsService, shipping metrics + logs OUTBOUND to the central host.
 # No inbound ports are opened — everything egresses over 443.
 monitoring_enabled: false
 
-# Local V2Ray StatsService gRPC API port (dokodemo-door inbound). Internal to
+# Local Xray StatsService gRPC API port (dokodemo-door inbound). Internal to
 # the compose network only — never host-published, never in firewall_allowed_tcp.
 v2ray_api_port: 10085
 

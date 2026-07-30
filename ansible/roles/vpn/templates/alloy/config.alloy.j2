@@ -27,11 +27,14 @@ prometheus.remote_write "obs" {
   }
 }
 
-// ---------- Logs: tail nginx + v2ray files, push to the central Loki ----------
+// ---------- Logs: tail nginx + xray files, push to the central Loki ----------
+// The xray files keep the job="v2ray" label on purpose — the Grafana dashboard
+// in server/observability/grafana/dashboards/ queries that label, and renaming
+// it would orphan every existing panel and stored query.
 local.file_match "vpn_logs" {
   path_targets = [
     {"__path__" = "/var/log/nginx/*.log", "job" = "nginx", "server" = "{{ monitoring_server_label }}"},
-    {"__path__" = "/var/log/v2ray/*.log", "job" = "v2ray", "server" = "{{ monitoring_server_label }}"},
+    {"__path__" = "/var/log/xray/*.log",  "job" = "v2ray", "server" = "{{ monitoring_server_label }}"},
   ]
 }
 

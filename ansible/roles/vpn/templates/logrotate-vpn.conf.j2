@@ -1,5 +1,9 @@
 # Managed by Ansible — edits on the VPS will be overwritten.
+#
+# The v2ray path is kept alongside the xray one so that logs left behind by a
+# pre-migration deploy keep being rotated instead of growing forever.
 /opt/vpn/runtime/logs/nginx/*.log
+/opt/vpn/runtime/logs/xray/*.log
 /opt/vpn/runtime/logs/v2ray/*.log {
     daily
     rotate 7

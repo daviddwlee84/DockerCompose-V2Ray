@@ -8,6 +8,22 @@ domain: "{{ vault_domain }}"
 letsencrypt_email: "{{ vault_letsencrypt_email }}"
 v2ray_uuid: "{{ vault_v2ray_uuid }}"
 
+# REALITY key material (vpn_protocol: reality | both). Generated per host by
+# scripts/reality_keys.py — `just az-configure` writes all three into the
+# per-host vault automatically.
+#
+# The private key is the only real secret here; the public key and short ID are
+# handed to clients. They live in the vault anyway so that
+# scripts/client_config.py can emit a complete client config straight from one
+# decryption, without needing an xray binary on the laptop.
+#
+# Defaulted to '' rather than left undefined so that a vmess_ws-only host with
+# an older vault still renders. The vpn role asserts they're non-empty when the
+# selected protocol actually needs them.
+reality_private_key: "{{ vault_reality_private_key | default('') }}"
+reality_public_key: "{{ vault_reality_public_key | default('') }}"
+reality_short_id: "{{ vault_reality_short_id | default('') }}"
+
 # Basic-auth credentials the monitoring agent uses to push metrics/logs to the
 # central observability host. Must match obs_ingest_user / obs_ingest_password
 # on the [observability] host. Optional — only consulted when monitoring_enabled.

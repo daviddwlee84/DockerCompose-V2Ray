@@ -1,6 +1,12 @@
+# LEGACY listener — only rendered when vpn_protocol is vmess_ws or both.
+# The default `reality` mode uses landing.conf.tmpl instead and has no TLS
+# terminating nginx at all.
+#
+# Port shown as 443 (vmess_ws mode). In `both` mode this listens on
+# ${VMESS_WS_PORT} instead, because 443 belongs to Xray/REALITY there.
 server{
     listen 80;
-    server_name {{ domain }};
+    server_name ${DOMAIN};
 
     location /.well-known/acme-challenge/ {
        root /var/www/certbot;
@@ -13,10 +19,10 @@ server{
 
 server {
     listen 443 ssl http2 default_server;
-    server_name {{ domain }};
+    server_name ${DOMAIN};
 
-    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -24,9 +30,9 @@ server {
     root /usr/share/nginx/html/v2ray;
     index index.html;
 
-    location {{ v2ray_ws_path }} {
+    location ${V2RAY_WS_PATH} {
         proxy_redirect off;
-        proxy_pass http://v2ray:{{ v2ray_internal_port }};
+        proxy_pass http://xray:30909;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -41,17 +47,3 @@ server {
         proxy_send_timeout 3600s;
     }
 }
-{%- if monitoring_enabled %}
-
-# Internal-only stub_status surface for nginx-prometheus-exporter. Port 8081 is
-# NOT host-published (compose publishes only 80/443), so this is reachable only
-# from the exporter container over the compose network — never the internet.
-server {
-    listen 8081;
-    server_name _;
-
-    location = /nginx_status {
-        stub_status;
-    }
-}
-{% endif %}

@@ -1,0 +1,51 @@
+{
+  "//": [
+    "Truth-source view of what runs on the VPS: VLESS + XTLS-Vision + REALITY.",
+    "Ansible renders ansible/roles/vpn/templates/xray/config.json.j2 instead —",
+    "that one also covers the vmess_ws / both modes. Keep the two in lockstep.",
+    "Xray-core ignores unknown top-level keys, so this comment block is inert."
+  ],
+  "log": {
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "listen": "0.0.0.0",
+      "port": 8443,
+      "protocol": "vless",
+      "tag": "reality-in",
+      "settings": {
+        "clients": [
+          {
+            "id": "${V2RAY_UUID}",
+            "flow": "xtls-rprx-vision",
+            "level": 1,
+            "email": "primary"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "${REALITY_DEST}",
+          "xver": 0,
+          "serverNames": ["${REALITY_SERVER_NAME}"],
+          "privateKey": "${REALITY_PRIVATE_KEY}",
+          "shortIds": ["${REALITY_SHORT_ID}"]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct",
+      "settings": {}
+    }
+  ]
+}

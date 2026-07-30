@@ -7,7 +7,11 @@ in more detail.
 
 This doc is a record, not an invitation to re-open the decisions. The hard
 constraints in [CLAUDE.md](../CLAUDE.md) (Ansible-only, rootful Docker,
-TLS-always, VMess / WebSocket, single operator) are taken as given.
+TLS-always, single operator) are taken as given. The protocol constraint listed
+here originally — VMess / WebSocket — *was* re-opened in 2026-07 and the default
+is now VLESS + Vision + REALITY (see
+[ProtocolEvaluation.md](ProtocolEvaluation.md)); nothing in the deploy-layer
+reasoning below depends on which of the two is running.
 
 ## The two layers
 

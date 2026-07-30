@@ -1,6 +1,6 @@
 // Grafana Alloy — per-VPN-server metrics + log shipper (truth-source reference;
 // the vpn role renders the .j2 mirror only when monitoring_enabled). Scrapes the
-// local exporters over the compose network, tails the nginx/v2ray log files,
+// local exporters over the compose network, tails the nginx/xray log files,
 // stamps a `server` label on everything (drives the Grafana $server dropdown),
 // and pushes OUTBOUND over HTTPS with basic auth to the central obs host.
 
@@ -26,11 +26,11 @@ prometheus.remote_write "obs" {
   }
 }
 
-// ---------- Logs: tail nginx + v2ray files, push to the central Loki ----------
+// ---------- Logs: tail nginx + xray files, push to the central Loki ----------
 local.file_match "vpn_logs" {
   path_targets = [
     {"__path__" = "/var/log/nginx/*.log", "job" = "nginx", "server" = "${MONITORING_SERVER_LABEL}"},
-    {"__path__" = "/var/log/v2ray/*.log", "job" = "v2ray", "server" = "${MONITORING_SERVER_LABEL}"},
+    {"__path__" = "/var/log/xray/*.log",  "job" = "v2ray", "server" = "${MONITORING_SERVER_LABEL}"},
   ]
 }
 

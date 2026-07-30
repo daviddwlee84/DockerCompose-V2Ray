@@ -76,7 +76,7 @@ rules:
 
 ```yaml
 proxies:
-  - { name: "JP-1", type: vmess, server: your.domain.tld, port: 443, uuid: <uuid>, alterId: 0, cipher: auto, tls: true, network: ws, ws-opts: { path: /v2ray } }
+  - { name: "JP-1", type: vless, server: your.domain.tld, port: 443, uuid: <uuid>, network: tcp, udp: true, tls: true, flow: xtls-rprx-vision, servername: www.apple.com, client-fingerprint: chrome, reality-opts: { public-key: <pbk>, short-id: <sid> } }
 ```
 
 > 規則集要轉成 `.mrs` 可用 mihomo：`mihomo convert-ruleset domain yaml reject.yaml reject.mrs`。
@@ -98,7 +98,7 @@ dns-server = https://dns.google/dns-query
 skip-proxy = 127.0.0.1, 192.168.0.0/16, 10.0.0.0/8, localhost, *.local
 
 [Proxy]
-JP-1 = vmess, your.domain.tld, 443, username=<uuid>, ws=true, ws-path=/v2ray, tls=true, alterId=0
+JP-1 = vless, your.domain.tld, 443, username=<uuid>, tls=true, flow=xtls-rprx-vision, sni=www.apple.com, public-key=<pbk>, short-id=<sid>, fingerprint=chrome
 
 [Proxy Group]
 PROXY = select, JP-1
@@ -257,7 +257,7 @@ Loyalsoldier/meta-rules-dat 的通用集，只自維護「你個人專屬」那�
 ## 對接本專案
 
 本專案**已經在 VPS 上跑 nginx**（[`server/compose.yml`](../../server/compose.yml) +
-[`server/templates/nginx/v2ray.conf.tmpl`](../../server/templates/nginx/v2ray.conf.tmpl)），
+[`server/templates/nginx/ws.conf.tmpl`](../../server/templates/nginx/ws.conf.tmpl)），
 天然就是個現成的靜態主機，可順手兼當 provider host：
 
 - 在 nginx 加一個 `location /provider/`（建議 basic-auth 或隱秘路徑）指向一個目錄，

@@ -57,7 +57,7 @@ if [ -n "$POSITIONAL" ] && [ -n "$FLAG_RG" ] && [ "$POSITIONAL" != "$FLAG_RG" ];
 fi
 POSITIONAL="${POSITIONAL:-$FLAG_RG}"
 
-# RG= is an alias for AZ_RG for symmetry with vmess_client.py / verify.sh.
+# RG= is an alias for AZ_RG for symmetry with client_config.py / verify.sh.
 if [ -z "${AZ_RG:-}" ] && [ -n "${RG:-}" ]; then
     AZ_RG="$RG"
 fi

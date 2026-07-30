@@ -1,0 +1,14 @@
+server {
+    listen 80 default_server;
+    server_name ${DOMAIN};
+
+    # No `return 301 https://` — in the default `reality` mode port 443 is
+    # Xray, and redirecting a browser there hands it the borrowed dest site's
+    # certificate under the wrong hostname (TLS error). Serve plain HTTP.
+    #
+    # The ACME challenge location only appears in modes that need a Let's
+    # Encrypt certificate (vmess_ws / both) — see the .j2.
+
+    root /usr/share/nginx/html/v2ray;
+    index index.html;
+}

@@ -13,17 +13,18 @@ operator after a year away from the repo) can see what was considered.
 
 Three systemd units replacing the three compose services:
 
-- **`v2ray.service`** — install the upstream binary (official install
-  script or a pinned GitHub release), read config from `/etc/v2ray/config.json`
-  (currently rendered to `runtime/v2ray/config.json`), log to
-  `/var/log/v2ray/`.
+- **`xray.service`** — install the upstream binary (official install
+  script or a pinned GitHub release), read config from
+  `/usr/local/etc/xray/config.json` (currently rendered to
+  `runtime/xray/config.json`), log to `/var/log/xray/`.
 - **`nginx.service`** — distro package (`apt install nginx`), site configs
   under `/etc/nginx/conf.d/` (currently rendered to
-  `runtime/nginx/conf.d/v2ray.conf`), logs to `/var/log/nginx/` with the
+  `runtime/nginx/conf.d/{landing,ws}.conf`), logs to `/var/log/nginx/` with the
   distro's logrotate rules.
 - **`certbot.timer`** — `apt install certbot python3-certbot-nginx` (or snap),
   webroot `/var/www/certbot/`, auto-renewal via the packaged systemd timer
-  instead of a sidecar container loop.
+  instead of a sidecar container loop. Only relevant in the `vmess_ws` / `both`
+  modes; the default REALITY mode needs no certificate of ours.
 
 The Ansible `vpn` role would change shape but not concept:
 
@@ -32,7 +33,7 @@ The Ansible `vpn` role would change shape but not concept:
   [`server/templates/`](../server/templates/) via `.j2` — the Jinja2 source
   tree doesn't move.
 - Destination paths change from `{{ deploy_path }}/runtime/...` to
-  `/etc/nginx/conf.d/` and `/etc/v2ray/`.
+  `/etc/nginx/conf.d/` and `/usr/local/etc/xray/`.
 - `notify: recreate stack` / `notify: reload nginx` handlers become
   `ansible.builtin.systemd: state=reloaded` equivalents.
 - [`ansible/roles/letsencrypt/tasks/main.yml`](../ansible/roles/letsencrypt/tasks/main.yml)
@@ -45,11 +46,11 @@ Grouped by axis. Winner noted per axis; sums below.
 
 ### Install / upgrade
 
-- **Docker:** pulls `v2ray/official:latest`, `nginx:latest`,
+- **Docker:** pulls `ghcr.io/xtls/xray-core` (pinned), `nginx:latest`,
   `certbot/certbot` — versions are decoupled from the Ubuntu release.
   Re-deploys on a fresh Ubuntu 26.04 VM in 2028 get the same behavior as
   today.
-- **Bare metal:** `apt install nginx v2ray? certbot`. V2Ray is not in
+- **Bare metal:** `apt install nginx xray? certbot`. Xray is not in
   the Ubuntu archive, so you're on the upstream install script or pinned
   GitHub releases anyway. Nginx follows the distro's version, which drifts
   across Ubuntu LTS cycles.
@@ -61,7 +62,7 @@ Grouped by axis. Winner noted per axis; sums below.
 - Templates stay in `server/templates/*.tmpl` either way — both paths render
   to *some* on-disk config.
 - **Docker:** `notify: recreate stack` via `community.docker.docker_compose_v2`.
-- **Bare metal:** `notify: reload nginx` + `notify: restart v2ray` via
+- **Bare metal:** `notify: reload nginx` + `notify: restart xray` via
   `ansible.builtin.systemd`. Marginally simpler plumbing.
 - **Winner:** Tie, with a very slight edge to bare metal on handler
   simplicity.
@@ -82,10 +83,10 @@ Grouped by axis. Winner noted per axis; sums below.
 
 ### Log / volume layout
 
-- **Docker:** bind-mounts under `./runtime/logs/{nginx,v2ray}/` and
+- **Docker:** bind-mounts under `./runtime/logs/{nginx,xray}/` and
   `./runtime/certbot/{conf,www}/`. Visible on the host filesystem; no
   logrotate (not currently a problem — volumes are small).
-- **Bare metal:** `/var/log/{nginx,v2ray}/` with packaged logrotate rules
+- **Bare metal:** `/var/log/{nginx,xray}/` with packaged logrotate rules
   for nginx, and whatever you wire up for V2Ray.
 - **Winner:** Tie. Docker's bind-mounts are slightly easier to eyeball;
   bare metal's logrotate story is slightly more polished out-of-the-box.
@@ -134,7 +135,7 @@ Grouped by axis. Winner noted per axis; sums below.
 
 ### Operator muscle memory
 
-- The whole repo — `just logs-v2ray`, `just logs-nginx`, `just ps`,
+- The whole repo — `just logs-xray`, `just logs-nginx`, `just ps`,
   [`scripts/verify.sh`](../scripts/verify.sh) — is shaped around
   `docker compose`. Switching to systemd means rewriting all of the above
   and retraining fingers.
@@ -171,7 +172,7 @@ Rough shape of the diff, for calibration:
   [`ansible/roles/docker/`](../ansible/roles/docker/) role becomes
   unnecessary (or stays, gated off).
 - Rewrite [`scripts/verify.sh`](../scripts/verify.sh) (still hits the HTTP
-  surface, so this is small) and the `just logs-v2ray` / `just logs-nginx`
+  surface, so this is small) and the `just logs-xray` / `just logs-nginx`
   / `just ps` recipes (systemd + `journalctl` equivalents).
 - Rework [`test/Dockerfile`](../test/Dockerfile) into something
   systemd-capable (switch to `jrei/systemd-ubuntu` or move to Molecule +

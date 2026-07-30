@@ -43,21 +43,30 @@ everything, then pushes: metrics via **Prometheus remote-write** to
 
 ## Is there anything worth tuning on the *server*? (Yes: V2Ray stats)
 
-Most V2Ray tuning genuinely is client-side. The one high-value server-side knob
+Most proxy tuning genuinely is client-side. The one high-value server-side knob
 is the **StatsService**, which this feature turns on. When `monitoring_enabled`,
-`roles/vpn/templates/v2ray/config.json.j2` gains:
+`roles/vpn/templates/xray/config.json.j2` gains:
 
 - `"stats": {}` and `"api": { "tag": "api", "services": ["StatsService"] }`
 - a `"policy"` block enabling `statsUser*` + `statsInbound*` / `statsOutbound*`
 - a `dokodemo-door` **api inbound** on `127.0.0.1`-of-the-compose-net, port
   `v2ray_api_port` (10085), tagged `api`, plus a routing rule pinning it to the
   api outbound
-- `"tag": "proxy"` on the vmess inbound and `"email": "primary"` on the client so
-  the counters are keyed by inbound and by user
+- a tag on each inbound (`reality-in` / `ws-in`) and `"email": "primary"` on the
+  client so the counters are keyed by inbound and by user
 
 That's what produces `v2ray_traffic_{up,down}link_bytes_total{dimension,target}`
 — i.e. "who used how much bandwidth." Without it there is no traffic accounting
-at all. `alterId: 64` / VMess is unchanged (protocol migration is out of scope).
+at all.
+
+> **Xray compatibility caveat.** Since the 2026-07 REALITY migration the core is
+> Xray-core, not v2ray-core. Xray exposes an equivalent StatsService gRPC API, so
+> `wi1dcard/v2ray-exporter` is expected to keep working — but its README only
+> claims V2Ray/V2Fly, and this has not been verified on a live host
+> (`monitoring_enabled` defaults to false). If the exporter comes back empty,
+> swap it for [`compassvpn/xray-exporter`](https://github.com/compassvpn/xray-exporter),
+> which advertises Xray support explicitly. The Loki log job keeps the
+> `job="v2ray"` label deliberately, so existing dashboard queries don't orphan.
 
 ## Enable it
 
@@ -135,7 +144,7 @@ config overrides) as a follow-up.
 ## Profiling & traces (deferred, on purpose)
 
 otel-lgtm bundles Tempo (traces) and Pyroscope (profiles), but they are **not
-wired up**. A VMess proxy emits no distributed traces and isn't worth CPU-
+wired up**. A proxy like this emits no distributed traces and isn't worth CPU-
 profiling — metrics + logs carry ~all the value here. To add continuous
 profiling later you'd run a Grafana Alloy/OBI eBPF agent (privileged) on each
 VPN server pushing to Pyroscope; that's extra privilege on the proxy box for

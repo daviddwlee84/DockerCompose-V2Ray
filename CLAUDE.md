@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-Personal V2Ray (VMess over WebSocket) VPN server for a single operator. Nginx reverse-proxies TLS to V2Ray on one Ubuntu VPS; Let's Encrypt certs auto-renew via a certbot sidecar. Deploy is Ansible-based, run from the operator's laptop. No multi-host setup, no CI, no shared infrastructure.
+Personal VPN server for a single operator. Default protocol is **VLESS + XTLS-Vision + REALITY** on Xray-core, with Xray owning port 443 directly; nginx keeps port 80 for a landing page. A legacy **VMess over WebSocket + TLS** mode (nginx terminating Let's Encrypt TLS) is still selectable. Deploy is Ansible-based, run from the operator's laptop. No multi-host setup, no CI, no shared infrastructure.
 
 ## Common commands
 
@@ -13,9 +13,11 @@ All from the repo root, all via `just` (see `Justfile`). `ANSIBLE_OPTS='--ask-va
 - `just galaxy` — one-time: install ansible collections (`community.docker`, `community.general`, `ansible.posix`).
 - `just deploy` — full deploy (`common` + `docker` + `vpn` + `letsencrypt` roles via `ansible/playbooks/site.yml`). Use on a fresh VPS.
 - `just deploy-fast` — `vpn` role only. Use after template / config tweaks.
+- `just reality-keys` — generate REALITY x25519 keypair + short ID (`--verify-with-docker` to cross-check against the real xray binary).
 - `just rotate-uuid` — generate a new UUID and redeploy with it. Does NOT update the vault file; see `ansible/playbooks/rotate-uuid.yml` for the manual follow-up.
-- `DOMAIN=… just verify` — smoke test: 200 on `/`, 400 on `/v2ray` (= V2Ray handling), valid TLS chain.
-- `just logs-v2ray` / `just logs-nginx` / `just ps` — ad-hoc one-liners against the live VPS.
+- `DOMAIN=… just verify` — front-door smoke test; what it asserts depends on `vpn_protocol` (see below).
+- `just verify-proxy` — end-to-end: runs a throwaway Xray client against `out/client/xray-client.json` and checks traffic actually flows. The only check that proves the tunnel works.
+- `just logs-xray` / `just logs-xray-container` / `just logs-nginx` / `just ps` — ad-hoc one-liners against the live VPS.
 - `just vault-edit` / `just vault-encrypt` — wrappers for `ansible-vault` on `ansible/group_vars/vpn/vault.yml`.
 
 Local test harness (Ubuntu container, not a real VPS — see scope below):
@@ -41,6 +43,23 @@ Same pattern on the VPS: `/opt/vpn/{compose.yml,static/,runtime/}`. `runtime/` i
 
 If a config needs parameterization, change both the `.tmpl` (source-of-truth for humans) AND the `.j2` (what Ansible actually uses). They're kept in lockstep on purpose.
 
+### `vpn_protocol` — the one switch that reshapes the whole stack
+
+`ansible/group_vars/all.yml` picks the inbound topology. This exists because **REALITY has to own port 443**: its entire value is that an unauthenticated prober gets transparently forwarded to `reality_dest`, which stops being true the moment nginx sits in front. So the modes are mutually exclusive, not layered.
+
+| `vpn_protocol` | 443 | 80 | Let's Encrypt |
+|---|---|---|---|
+| `reality` (default) | Xray (VLESS+Vision+REALITY) | nginx landing page | not used |
+| `vmess_ws` (legacy) | nginx TLS → Xray VMess/WS | nginx ACME + 301 | required |
+| `both` (transitional) | Xray REALITY | nginx landing + ACME | required (for `vmess_ws_port`) |
+
+Consequences worth knowing before editing anything here:
+
+- **Mode switches must clean up.** `roles/vpn/tasks/nginx_conf.yml` deletes the nginx conf files that don't belong to the current mode. Skip that and a stale `ws.conf` keeps nginx trying to bind 443 and read an unrenewed cert — nginx then fails to start and the landing page goes with it.
+- **Xray-core dropped `alterId > 0`.** The VMess inbound is AEAD-only; legacy clients pinned to `alterId: 64` cannot connect at all.
+- **The image is distroless, running as uid 65532.** No shell (`docker logs xray`, never `exec`), and `runtime/xray/config.json` + `runtime/logs/xray` must be chowned to 65532. 443 is published as `443:8443` so a non-root process never binds a privileged port.
+- `letsencrypt_enabled` is derived from `vpn_protocol`, not set by hand.
+
 ### Secrets: `vars.yml` → `vault.yml` indirection
 
 `ansible/group_vars/vpn/vars.yml` aliases plain names to `vault_*` values:
@@ -48,22 +67,27 @@ If a config needs parameterization, change both the `.tmpl` (source-of-truth for
 ```yaml
 domain: "{{ vault_domain }}"
 v2ray_uuid: "{{ vault_v2ray_uuid }}"
+reality_private_key: "{{ vault_reality_private_key | default('') }}"
 ```
 
 All templates reference plain names (`{{ domain }}`, never `{{ vault_domain }}`). Templates therefore don't know or care whether a value came from the vault. **When adding a new secret, add to both `vault.yml` (encrypted) and `vars.yml` (alias).**
+
+`vault_v2ray_uuid` keeps its name despite the move to VLESS — it doubles as the VLESS client id, and renaming the key would silently invalidate every already-encrypted `host_vars/<rg>/vault.yml` on disk.
 
 `vault.yml` is gitignored as defense-in-depth; commit it only after `ansible-vault encrypt` (`just vault-encrypt`).
 
 ### Let's Encrypt bootstrap — coordinated across two roles
 
+Only runs when `letsencrypt_enabled` (i.e. `vpn_protocol` is `vmess_ws` or `both`). The default `reality` mode has no certificate of ours at all.
+
 Chicken-and-egg: nginx needs a cert to listen on 443; certbot needs nginx on 80 to solve HTTP-01; the template references a cert path that doesn't exist on a fresh host.
 
 Resolution (two roles, strict order):
 
-1. `vpn` role (runs first) checks whether `runtime/certbot/conf/live/$DOMAIN/fullchain.pem` exists. If yes → renders the full nginx conf. If no → renders `acme-only.conf.j2` (port 80 only, no SSL block).
-2. `letsencrypt` role (runs after) brings up nginx alone with that ACME-only conf, runs a one-shot `certbot --webroot`, re-renders the full nginx conf, brings up the full compose stack (with the certbot renewal sidecar).
+1. `vpn` role (runs first) checks whether `runtime/certbot/conf/live/$DOMAIN/fullchain.pem` exists. If no → renders `acme-only.conf.j2` (port 80 only, no SSL block) instead of the real config.
+2. `letsencrypt` role (runs after) brings up nginx alone with that ACME-only conf, runs a one-shot `certbot --webroot`, then re-renders the real nginx configs by including `roles/vpn/tasks/nginx_conf.yml`, and brings up the full compose stack (with the certbot renewal sidecar).
 
-Don't reorder `vpn` and `letsencrypt` in `site.yml`. Subsequent deploys (cert present) are near no-ops on both.
+Don't reorder `vpn` and `letsencrypt` in `site.yml`. The `letsencrypt` role is also the only place that runs `docker compose up`, in *every* mode — that's why it still runs unconditionally despite the name.
 
 ### `legacy/` folder policy
 
@@ -86,8 +110,8 @@ The mirror-swap approach (vs injecting a host proxy via Docker config) is delibe
 ## Design constraints (decided — don't re-litigate)
 
 - **Ansible only.** Not OpenTofu / Terraform. Operator moves between cloud providers (Azure, GCP, Hetzner); VM creation is click-ops and not the pain point. Config management is.
-- **TLS always.** The no-TLS compose flow was retired to `legacy/compose/`. Don't re-add a conditional.
-- **V2Ray / VMess.** Protocol migration to Xray/VLESS is explicitly out of scope. `docs/XrayUI.md` is a future-considerations note.
+- **TLS always.** The no-TLS compose flow was retired to `legacy/compose/`. Don't re-add a conditional. Note REALITY satisfies this — it performs a genuine TLS 1.3 handshake; the certificate simply belongs to `reality_dest` rather than to us.
+- **Xray-core, VLESS + Vision + REALITY by default.** Decided 2026-07, reversing the earlier "protocol migration is out of scope" constraint. The trigger was an audit, not fashion: the old stack ran `v2ray/official:latest` (last pushed 6 years ago) with `alterId: 64` (legacy non-AEAD VMess). Full reasoning in `docs/ProtocolEvaluation.md`; operations in `docs/REALITY-MIGRATION.md`. `vpn_protocol: vmess_ws` stays supported for CDN fronting and ancient clients — that one *is* a deliberate conditional.
 - **Rootful Docker.** Rootless + port 80/443 needs `setcap` on `rootlesskit` — extra friction for zero gain on a single-operator VPS.
 
 ## Workflow preferences

@@ -1,0 +1,14 @@
+{# Internal-only stub_status surface for nginx-prometheus-exporter. Port 8081 is
+   never host-published, so this is reachable only from the exporter container
+   over the compose network — never the internet.
+
+   Lives in its own conf.d file rather than inside ws.conf.j2 so that it also
+   exists in `reality` mode, where no WebSocket listener is rendered at all. #}
+server {
+    listen 8081;
+    server_name _;
+
+    location = /nginx_status {
+        stub_status;
+    }
+}

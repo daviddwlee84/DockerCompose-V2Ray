@@ -5,12 +5,12 @@
     command: nginx -s reload
   listen: reload nginx
 
-- name: Restart v2ray
+- name: Restart xray
   community.docker.docker_container:
-    name: v2ray
+    name: xray
     state: started
     restart: true
-  listen: restart v2ray
+  listen: restart xray
 
 - name: Recreate compose stack
   community.docker.docker_compose_v2:

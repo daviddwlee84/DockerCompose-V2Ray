@@ -1,7 +1,33 @@
 ---
 # Renders templates and syncs compose.yml + static assets into {{ deploy_path }}
 # on the VPS. Does NOT bring up compose — the letsencrypt role does that after
-# ensuring a cert exists.
+# ensuring a cert exists (in `reality` mode there is no cert to wait for, but it
+# is still the one place that runs `docker compose up`).
+
+- name: Validate vpn_protocol
+  ansible.builtin.assert:
+    that: vpn_protocol in ['reality', 'vmess_ws', 'both']
+    fail_msg: >-
+      vpn_protocol must be one of reality / vmess_ws / both (got
+      {{ vpn_protocol | default('undefined') }}). See docs/REALITY-MIGRATION.md.
+
+# Without this, a host whose vault predates the REALITY migration renders an
+# Xray config with an empty privateKey. Xray starts, accepts TCP, and silently
+# fails every handshake — which looks exactly like being blocked. Fail loudly
+# at deploy time instead.
+- name: Require REALITY key material for the selected protocol
+  when: vpn_protocol in ['reality', 'both']
+  ansible.builtin.assert:
+    that:
+      - reality_private_key | default('') | length > 0
+      - reality_public_key | default('') | length > 0
+      - reality_short_id | default('') | length > 0
+    fail_msg: >-
+      vpn_protocol={{ vpn_protocol }} needs vault_reality_private_key /
+      vault_reality_public_key / vault_reality_short_id in this host's vault.
+      Generate them with `scripts/reality_keys.py` and add them via
+      `just vault-edit {{ inventory_hostname }}`, or re-run
+      `scripts/az_configure.py --force` to regenerate the vault.
 
 - name: Create deploy directory tree
   ansible.builtin.file:
@@ -15,14 +41,24 @@
     - "{{ deploy_path }}/static"
     - "{{ deploy_path }}/runtime"
     - "{{ deploy_path }}/runtime/nginx/conf.d"
-    - "{{ deploy_path }}/runtime/v2ray"
+    - "{{ deploy_path }}/runtime/xray"
     - "{{ deploy_path }}/runtime/certbot/conf"
     - "{{ deploy_path }}/runtime/certbot/www"
     - "{{ deploy_path }}/runtime/logs/nginx"
-    - "{{ deploy_path }}/runtime/logs/v2ray"
     - "{{ deploy_path }}/runtime/alloy"
 
-- name: Install logrotate config for nginx + v2ray logs
+# Owned by the image's nonroot uid, not by ansible_user: ghcr.io/xtls/xray-core
+# runs as 65532 and cannot write into a dir owned by anyone else. Without this
+# Xray exits at startup with a permission error on access.log.
+- name: Create Xray log directory owned by the container's nonroot uid
+  ansible.builtin.file:
+    path: "{{ deploy_path }}/runtime/logs/xray"
+    state: directory
+    owner: "65532"
+    group: "65532"
+    mode: "0755"
+
+- name: Install logrotate config for nginx + xray logs
   ansible.builtin.template:
     src: logrotate-vpn.conf.j2
     dest: /etc/logrotate.d/vpn
@@ -54,14 +90,22 @@
     mode: "0644"
   notify: recreate stack
 
-- name: Render V2Ray config
+# 0640 owned by 65532 rather than by ansible_user: the config carries the UUID
+# and the REALITY private key, so it must not be world-readable, but the
+# container user has to be able to read it through the :ro bind mount.
+- name: Render Xray config
   ansible.builtin.template:
-    src: v2ray/config.json.j2
-    dest: "{{ deploy_path }}/runtime/v2ray/config.json"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    src: xray/config.json.j2
+    dest: "{{ deploy_path }}/runtime/xray/config.json"
+    owner: "65532"
+    group: "65532"
     mode: "0640"
-  notify: restart v2ray
+  notify: restart xray
+
+- name: Remove superseded V2Ray runtime config
+  ansible.builtin.file:
+    path: "{{ deploy_path }}/runtime/v2ray"
+    state: absent
 
 - name: Render Grafana Alloy agent config (monitoring)
   when: monitoring_enabled | bool
@@ -78,21 +122,9 @@
     path: "{{ deploy_path }}/runtime/certbot/conf/live/{{ domain }}/fullchain.pem"
   register: le_cert
 
-- name: Render full nginx config (cert present)
-  when: le_cert.stat.exists
-  ansible.builtin.template:
-    src: nginx/v2ray.conf.j2
-    dest: "{{ deploy_path }}/runtime/nginx/conf.d/v2ray.conf"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0644"
-  notify: reload nginx
-
-- name: Render ACME-only nginx config (first-run bootstrap)
-  when: not le_cert.stat.exists
-  ansible.builtin.template:
-    src: nginx/acme-only.conf.j2
-    dest: "{{ deploy_path }}/runtime/nginx/conf.d/v2ray.conf"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: "0644"
+# ACME-only bootstrap applies solely to the modes that need a certificate; the
+# default `reality` mode goes straight to its final config.
+- name: Render nginx configs
+  ansible.builtin.include_tasks: nginx_conf.yml
+  vars:
+    nginx_acme_only: "{{ letsencrypt_enabled | bool and not le_cert.stat.exists }}"

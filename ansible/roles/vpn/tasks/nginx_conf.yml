@@ -1,0 +1,79 @@
+---
+# Renders the nginx conf.d set for the selected vpn_protocol and REMOVES the
+# files belonging to the other modes. The removal half matters: conf.d is an
+# include-everything directory, so a leftover ws.conf from a previous
+# `vmess_ws` deploy would keep nginx trying to bind 443 (now Xray's) and to
+# read a certificate that certbot is no longer renewing — nginx then refuses to
+# start and the landing page disappears with it.
+#
+# Included twice: once from the vpn role, and again from the letsencrypt role
+# after certbot has produced a real certificate.
+#
+# Caller sets nginx_acme_only: true to serve only the HTTP-01 challenge (plus
+# the landing page) because the certificate referenced by ws.conf.j2 does not
+# exist yet.
+
+- name: Render nginx landing / ACME-bootstrap config
+  when: nginx_acme_only | bool
+  ansible.builtin.template:
+    src: nginx/acme-only.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/landing.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: reload nginx
+
+- name: Render nginx landing page config
+  when:
+    - not nginx_acme_only | bool
+    - vpn_protocol in ['reality', 'both']
+  ansible.builtin.template:
+    src: nginx/landing.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/landing.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: reload nginx
+
+- name: Render nginx WebSocket TLS listener
+  when:
+    - not nginx_acme_only | bool
+    - vpn_protocol in ['vmess_ws', 'both']
+  ansible.builtin.template:
+    src: nginx/ws.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/ws.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: reload nginx
+
+- name: Render nginx stub_status surface (monitoring)
+  when: monitoring_enabled | bool
+  ansible.builtin.template:
+    src: nginx/stub-status.conf.j2
+    dest: "{{ deploy_path }}/runtime/nginx/conf.d/stub-status.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+  notify: reload nginx
+
+- name: Remove nginx configs that don't belong to this mode
+  ansible.builtin.file:
+    path: "{{ deploy_path }}/runtime/nginx/conf.d/{{ item.name }}"
+    state: absent
+  # `| bool` is belt-and-braces: these render as real booleans today, but a
+  # truthy "False" string here would silently delete a live listener.
+  when: item.stale | bool
+  loop:
+    # Pre-2026-07 filename, back when one template covered every case.
+    - name: v2ray.conf
+      stale: true
+    - name: landing.conf
+      stale: "{{ not (nginx_acme_only | bool or vpn_protocol in ['reality', 'both']) }}"
+    - name: ws.conf
+      stale: "{{ nginx_acme_only | bool or vpn_protocol == 'reality' }}"
+    - name: stub-status.conf
+      stale: "{{ not monitoring_enabled | bool }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: reload nginx
