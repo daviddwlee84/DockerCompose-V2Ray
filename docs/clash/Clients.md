@@ -37,18 +37,18 @@ mihomo 核心；dashboard 則純前端，透過 [API.md](API.md) 的 9090 控制
 | [`Watfaq/clash-rs`](https://github.com/Watfaq/clash-rs) | 活躍 | Rust 重寫的 Clash 相容核心 |
 | `sing-box` | 活躍 | 通用代理核心，ShellCrash 也支援 |
 | 原版 `Dreamacro/clash` | **已封存** | 2023-11 唯讀 |
-| `Kuingsmile/clash-core` | 維護鏡像 | **我們現用**，原版同系，凍結於 v1.18 |
+| `Kuingsmile/clash-core` | 維護鏡像 | 原版同系，凍結於 v1.18。`clients/docker/` 仍用它，但**不支援 VLESS/REALITY**，連不上現在的 server |
 
 ## 2. GUI 客戶端
 
 | GUI | 平台 | 狀態 | 備註 |
 |---|---|---|---|
-| [**Clash Verge Rev**](https://www.clashverge.dev/) | Win/macOS/Linux | **推薦** | Tauri + 內建 mihomo，可從 UI 更新核心；支援 TUN、Merge/Script、WebDav 備份（issue #6） |
+| [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | Win x64/x86、Linux x64/arm64、macOS 11+ | **推薦** | GPL-3.0、Tauri、內建 mihomo，可從 UI 切換核心；支援 TUN、Merge/Script、WebDav 備份。維護活躍（v2.5.2, 2026-07）。官網 [clashverge.dev](https://www.clashverge.dev/) |
 | [`Lythrilla/NeedyClash`](https://github.com/Lythrilla/NeedyClash) | 桌面 | 活躍 | 主打美觀的 clash GUI（issue #6） |
 | [FlClash](https://github.com/chen08209/FlClash) | 跨平台（含行動） | 活躍 | Flutter，多平台 |
 | Stash | iOS/macOS | 商業 | Apple 平台 |
-| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用 |
-| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用 |
+| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用；**不支援 REALITY** |
+| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用；**不支援 REALITY** |
 
 > issue #6 還列了 mihomo 官方文檔與 Clash Verge Rev 的「快速入門」，本質都是指向
 > **Verge Rev + mihomo** 這條主線。

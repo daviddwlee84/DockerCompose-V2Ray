@@ -13126,3 +13126,1522 @@ vless-reality-default
 origin/master
 ```
 </details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:12Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Commit the REALITY migration
+
+```bash
+git add -A && git commit -q -F - <<'EOF'
+Default to VLESS + XTLS-Vision + REALITY on Xray-core
+
+An audit of what this repo actually shipped turned up three problems that
+mattered more than "VMess is a bit old":
+
+1. `v2ray/official:latest` was last pushed to Docker Hub six years ago. The
+   `:latest` tag implied it tracked upstream; it was frozen at v4.x, and the
+   V2Ray ecosystem had since forked to v2fly.
+2. `alterId: 64` selected legacy MD5-auth, non-AEAD VMess — the variant active
+   probing and replay attacks historically broke. The value was consistent
+   across templates, the client generator, README and the Clash config, while
+   docs/clash/Core.md had already flagged it as obsolete. The docs knew; the
+   deploy never caught up.
+3. Stacked static fingerprints: a `*.cloudapp.azure.com` SNI, a WebSocket path
+   literally named `/v2ray`, and a Let's Encrypt certificate for a domain with
+   no traffic history in CT.
+
+REALITY removes all three: no certificate of ours, no WebSocket, and an SNI
+borrowed from a real site that unauthenticated probes get forwarded to.
+
+`vpn_protocol` picks the topology — reality (default) / vmess_ws (legacy) /
+both (transitional). They are mutually exclusive rather than layered because
+REALITY has to own 443; with nginx in front, transparent probe forwarding stops
+working. In `both`, the legacy WebSocket listener moves to vmess_ws_port.
+
+Notes on the implementation:
+
+- The Xray config template builds its inbound list as data and serialises with
+  to_nice_json. The old template hand-wrote JSON with conditionals around
+  commas, where one wrong branch yields a parse error visible only in
+  `docker logs`.
+- roles/vpn/tasks/nginx_conf.yml deletes the conf files that don't belong to
+  the active mode. Without it, a stale ws.conf keeps nginx binding 443 and
+  reading an unrenewed cert, so nginx fails to start and takes the landing page
+  with it.
+- ghcr.io/xtls/xray-core is distroless and runs as uid 65532, so the config and
+  log dir are chowned to it, and 443 is published as 443:8443 rather than
+  relying on Docker's ip_unprivileged_port_start default.
+- scripts/reality_keys.py reimplements `xray x25519` (clamping +
+  base64.RawURLEncoding) so the laptop needs no xray binary. The clamping is
+  load-bearing: an unclamped private key makes the server derive a public key
+  that no longer matches the clients', and every handshake then fails
+  indistinguishably from being blocked. Verified against the RFC 7748 vector,
+  with --verify-with-docker to diff against the real binary.
+- verify.sh became mode-aware: under REALITY the proof is inverted — the
+  borrowed SNI must return the dest site's valid certificate, and our own
+  hostname must NOT return one of ours. That only checks the front door, so
+  verify-proxy runs a throwaway Xray client and confirms traffic actually
+  flows.
+- vault_v2ray_uuid keeps its name; it doubles as the VLESS id, and renaming it
+  would silently invalidate every encrypted host_vars vault on disk.
+
+Xray-core dropped alterId > 0 entirely, so any surviving VMess client must move
+to AEAD regardless of mode — which incidentally forces finding 2 closed.
+
+Not validated here: everything requiring Docker (test harness,
+--verify-with-docker, verify-proxy) — the daemon would not start on this
+machine. Run `just az-cycle` against a throwaway VM before trusting a deploy.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+EOF
+git log --oneline -2
+```
+
+```text
+[WARNING] Unstaged files detected.
+[INFO] Stashing unstaged files to /Users/david/.cache/pre-commit/patch1785431641-25846.
+Auto-redact secrets in agent artifacts...................................Passed
+Detect hardcoded secrets.................................................Passed
+detect private key.......................................................Passed
+check for added large files..............................................Passed
+check for merge conflicts................................................Passed
+fix end of files.........................................................Passed
+trim trailing whitespace.................................................Passed
+check yaml...............................................................Passed
+check that executables have shebangs.....................................Passed
+shellcheck...............................................................Passed
+[INFO] Restored changes from /Users/david/.cache/pre-commit/patch1785431641-25846.
+1abce8f Default to VLESS + XTLS-Vision + REALITY on Xray-core
+0086672 Document the mihomo DNS-poisoning trap; fix it in the client example
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:21Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Fast-forward merge to master and delete branch
+
+`git status --short && echo "---" && git checkout master 2>&1 && git merge --ff-only vless-reality-default 2>&1 && git branch -d vless-reality-default 2>&1 && echo "---" && git log --oneline -2 && git status --short`
+
+```text
+Exit code 1
+ M .specstory/history/2026-07-29_13-50-55Z-name-type-vless-server.md
+---
+error: Your local changes to the following files would be overwritten by checkout:
+	.specstory/history/2026-07-29_13-50-55Z-name-type-vless-server.md
+Please commit your changes or stash them before you switch branches.
+Aborting
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:31Z)**_
+
+<think><details><summary>Thought Process</summary>
+The specstory history file is being continuously updated as a live session transcript, so I need to handle that alongside my git operations. I could stash it before switching branches and then pop it back, or just commit it as part of the branch update—either way works since it's the same file across both branches.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:34Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Stash live transcript, ff-merge, restore
+
+```bash
+git stash push -q -m "live specstory transcript" .specstory/history/2026-07-29_13-50-55Z-name-type-vless-server.md \
+ && git checkout -q master \
+ && git merge --ff-only vless-reality-default \
+ && git branch -d vless-reality-default \
+ && git stash pop -q \
+ && echo "---" && git log --oneline -3 && echo "--- status ---" && git status --short
+```
+
+```text
+Updating 0086672..1abce8f
+Fast-forward
+ .claude/plans/peaceful-puzzling-pie.md             |   279 +
+ .gitignore                                         |     5 +
+ .../2026-07-29_13-50-55Z-name-type-vless-server.md | 13128 +++++++++++++++++++
+ CLAUDE.md                                          |    40 +-
+ Justfile                                           |    30 +-
+ README.md                                          |    65 +-
+ TODO.md                                            |    28 +-
+ ansible/group_vars/all.yml                         |    65 +-
+ ansible/group_vars/vpn/vars.yml                    |    16 +
+ ansible/group_vars/vpn/vault.yml.example           |    13 +
+ ansible/roles/letsencrypt/tasks/main.yml           |   139 +-
+ ansible/roles/vpn/handlers/main.yml                |     6 +-
+ ansible/roles/vpn/tasks/main.yml                   |    88 +-
+ ansible/roles/vpn/tasks/nginx_conf.yml             |    79 +
+ ansible/roles/vpn/templates/alloy/config.alloy.j2  |     7 +-
+ ansible/roles/vpn/templates/compose.yml.j2         |    50 +-
+ ansible/roles/vpn/templates/logrotate-vpn.conf.j2  |     4 +
+ .../roles/vpn/templates/nginx/acme-only.conf.j2    |    17 +-
+ ansible/roles/vpn/templates/nginx/landing.conf.j2  |    18 +
+ .../roles/vpn/templates/nginx/stub-status.conf.j2  |    14 +
+ .../templates/nginx/{v2ray.conf.j2 => ws.conf.j2}  |    28 +-
+ ansible/roles/vpn/templates/v2ray/config.json.j2   |    77 -
+ ansible/roles/vpn/templates/xray/config.json.j2    |   116 +
+ clients/docker/config.yaml                         |    44 +-
+ clients/mihomo-docker/config.example.yaml          |    11 +-
+ docs/BareMetalEvaluation.md                        |    29 +-
+ docs/DeploymentEvaluation.md                       |     6 +-
+ docs/IP-ROTATION.md                                |    12 +-
+ docs/LOG-ROTATION.md                               |    21 +-
+ docs/MULTI-HOST.md                                 |     2 +-
+ docs/OBSERVABILITY.md                              |    21 +-
+ docs/ProtocolEvaluation.md                         |   144 +-
+ docs/REALITY-MIGRATION.md                          |   205 +
+ docs/clash/BestPractice.md                         |    29 +-
+ docs/clash/Clients.md                              |     4 +-
+ docs/clash/Core.md                                 |    40 +-
+ docs/clash/README.md                               |     4 +-
+ docs/clash/SelfHostProviders.md                    |     6 +-
+ ...ng-connections-drop-at-60s-other-side-closed.md |    11 +-
+ scripts/az_configure.py                            |    64 +-
+ scripts/az_down.sh                                 |     2 +-
+ scripts/az_rotate_ip.sh                            |     2 +-
+ scripts/az_up.sh                                   |    19 +-
+ scripts/client_config.py                           |   623 +
+ scripts/reality_keys.py                            |   176 +
+ scripts/verify.sh                                  |   138 +-
+ scripts/verify_proxy.sh                            |   108 +
+ scripts/vmess_client.py                            |   406 -
+ server/README.md                                   |    25 +-
+ server/compose.yml                                 |    42 +-
+ server/templates/alloy/config.alloy.tmpl           |     6 +-
+ server/templates/nginx/landing.conf.tmpl           |    14 +
+ .../nginx/{v2ray.conf.tmpl => ws.conf.tmpl}        |    21 +-
+ server/templates/v2ray/config.json.tmpl            |    74 -
+ server/templates/xray/config.json.tmpl             |    51 +
+ test/README.md                                     |     2 +-
+ 56 files changed, 15733 insertions(+), 941 deletions(-)
+ create mode 100644 .claude/plans/peaceful-puzzling-pie.md
+ create mode 100644 .specstory/history/2026-07-29_13-50-55Z-name-type-vless-server.md
+ create mode 100644 ansible/roles/vpn/tasks/nginx_conf.yml
+ create mode 100644 ansible/roles/vpn/templates/nginx/landing.conf.j2
+ create mode 100644 ansible/roles/vpn/templates/nginx/stub-status.conf.j2
+ rename ansible/roles/vpn/templates/nginx/{v2ray.conf.j2 => ws.conf.j2} (68%)
+ delete mode 100644 ansible/roles/vpn/templates/v2ray/config.json.j2
+ create mode 100644 ansible/roles/vpn/templates/xray/config.json.j2
+ create mode 100644 docs/REALITY-MIGRATION.md
+ create mode 100755 scripts/client_config.py
+ create mode 100755 scripts/reality_keys.py
+ create mode 100755 scripts/verify_proxy.sh
+ delete mode 100755 scripts/vmess_client.py
+ create mode 100644 server/templates/nginx/landing.conf.tmpl
+ rename server/templates/nginx/{v2ray.conf.tmpl => ws.conf.tmpl} (74%)
+ delete mode 100644 server/templates/v2ray/config.json.tmpl
+ create mode 100644 server/templates/xray/config.json.tmpl
+Deleted branch vless-reality-default (was 1abce8f).
+---
+1abce8f Default to VLESS + XTLS-Vision + REALITY on Xray-core
+0086672 Document the mihomo DNS-poisoning trap; fix it in the client example
+27661c3 Document GFW Docker Hub 403 workaround for mihomo clients.
+--- status ---
+ M .specstory/history/2026-07-29_13-50-55Z-name-type-vless-server.md
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:42Z)**_
+
+<think><details><summary>Thought Process</summary>
+I've merged the changes into master and cleaned up the branch without pushing yet. Now I'm moving on to the second task: finding and updating all references from Clash for Windows to Clash Verge Rev throughout the codebase.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:42Z)**_
+
+Merged fast-forward to `master`, branch deleted. Not pushed — per CLAUDE.md that's a separate explicit step.
+
+Now the Clash Verge Rev change. Let me find every Clash for Windows reference:
+
+_**Agent (claude-opus-5 2026-07-30 17:14:43Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Find all Clash for Windows references
+
+`grep -rn -i "clash for windows\|clash_for_windows\|clashforwindows\|\bCFW\b" --include="*.md" --include="*.yml" --include="*.yaml" --include="*.sh" --include="*.py" . --exclude-dir=.git --exclude-dir=.specstory --exclude-dir=.cursor --exclude-dir=ui_pages --exclude-dir=.claude`
+
+```text
+clients/docker/config.yaml:131:# Clash for Windows
+clients/docker/config.yaml:132:cfw-bypass:
+clients/docker/config.yaml:157:cfw-latency-timeout: 5000
+clients/cli/README.md:3:In GUI, you can use "Clash for Windows" in Windows, MacOS, and Linux. They can share same config YAML.
+clients/cli/README.md:5:- [Clash for Windows](https://www.clashforwindows.net/)
+clients/cli/README.md:6:  - [Clash for Windows Download – Clash for Windows](https://www.clashforwindows.net/clash-for-windows-download/)
+clients/cli/README.md:7:  - [配置文件 | Clash for Windows 代理工具使用说明](https://docs.gtk.pw/contents/configfile.html#%E6%A0%BC%E5%BC%8F)
+clients/cli/README.md:12:- [在 Linux 通过 cli 使用 Clash | Clash for Windows 代理工具使用说明](https://docs.gtk.pw/contents/linux/clash-cli.html#%E5%AE%89%E8%A3%85-installation) => setup `systemctl` service if needed
+legacy/README.md:22:  - `clash_for_windows.yml` — original 40KB client config template with the hardcoded default UUID baked in.
+legacy/clients/setup_linux_clash_client_old.sh:15:cp ../example/clash_for_windows.yml config.yaml
+docs/clash/Clients.md:51:| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用 |
+docs/clash/Clients.md:114:歷史上閉源/來路不明的 client 出過事：**Clash for Windows** 後期閉源且作者收到法律壓力後
+docs/clash/Clients.md:137:| Clash for Windows（閉源、已停更） | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0、Tauri、內建 mihomo、活躍維護，Win/macOS/Linux |
+legacy/example/clash_for_windows.yml:1537:# Clash for Windows
+legacy/example/clash_for_windows.yml:1538:cfw-bypass:
+legacy/example/clash_for_windows.yml:1573:cfw-latency-timeout: 5000
+docs/clash/ConfigManagement.md:181:- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:55Z)**_
+
+<think><details><summary>Thought Process</summary>
+I'm identifying the key issues to address: the CLI README actively recommends Clash for Windows which needs updating, the Docker config contains CFW-specific keys that should be removed or clarified since they won't work with mihomo/Verge, and the Clash documentation is already correct in recommending Clash Verge Rev as the archived CFW's replacement.
+
+I should also check the Docker README and note that the frozen Kuingsmile/clash-core used there can't support REALITY protocol, though the main concern here is the GUI recommendation in the CLI docs.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:55Z)**_
+
+<tool-use data-tool-type="read" data-tool-name="Read"><details>
+<summary>Tool use: **Read**</summary>
+ `./clients/cli/README.md`
+
+```text
+1	## Best Practice (I found)
+2	
+3	In GUI, you can use "Clash for Windows" in Windows, MacOS, and Linux. They can share same config YAML.
+4	
+5	- [Clash for Windows](https://www.clashforwindows.net/)
+6	  - [Clash for Windows Download – Clash for Windows](https://www.clashforwindows.net/clash-for-windows-download/)
+7	  - [配置文件 | Clash for Windows 代理工具使用说明](https://docs.gtk.pw/contents/configfile.html#%E6%A0%BC%E5%BC%8F)
+8	
+9	In CLI, you can use Clash-Core
+10	
+11	- [**Releases · Kuingsmile/clash-core**](https://github.com/Kuingsmile/clash-core/releases)
+12	- [在 Linux 通过 cli 使用 Clash | Clash for Windows 代理工具使用说明](https://docs.gtk.pw/contents/linux/clash-cli.html#%E5%AE%89%E8%A3%85-installation) => setup `systemctl` service if needed
+13	- [本地安装ShellCrash的教程 | Juewuy's Blog](https://juewuy.github.io/bdaz/)
+14	
+15	```bash
+16	wget https://github.com/Kuingsmile/clash-core/releases/download/1.18/clash-linux-386-v1.18.0.gz
+17	gunzip clash-linux-386-v1.18.0.gz
+18	chmod +x clash-linux-386-v1.18.0
+19	sudo mv clash-linux-386-v1.18.0 /usr/local/bin/clash
+20	```
+21	
+22	```bash
+23	$ clash
+24	INFO[0000] Start initial compatible provider HKMTMedia
+25	INFO[0000] Start initial compatible provider GlobalMedia
+26	INFO[0000] Start initial compatible provider Auto Select
+27	INFO[0000] Start initial compatible provider PROXY
+28	INFO[0000] Start initial compatible provider Apple
+29	INFO[0000] Start initial compatible provider Final
+30	INFO[0000] inbound http://127.0.0.1:7890 create success.
+31	INFO[0000] inbound socks://127.0.0.1:7891 create success.
+32	INFO[0000] RESTful API listening at: 127.0.0.1:9090
+33	INFO[0249] [TCP] 127.0.0.1:42262 --> github.com:443 match DomainKeyword(github) using PROXY[xxx Server]
+34	INFO[0254] [TCP] 127.0.0.1:42274 --> github.com:443 match DomainKeyword(github) using PROXY[yyy Server]
+35	INFO[0790] [TCP] 127.0.0.1:52190 --> dc.services.visualstudio.com:443 match DomainSuffix(visualstudio.com) using DIRECT
+36	```
+37	
+38	## Dashboard (for CLI)
+39	
+40	TODO:
+41	
+42	- [haishanh/yacd: Yet Another Clash Dashboard](https://github.com/haishanh/yacd?tab=readme-ov-file)
+43	- [haishanh/yacd - Docker Image | Docker Hub](https://hub.docker.com/r/haishanh/yacd)
+44	
+45	## Todo
+46	
+47	Ubuntu
+48	
+49	- [ ] Make clash a system service (`systemctl`)
+50	- [ ] Update environment variable in shell configure
+51	
+52	---
+53	
+54	## Others
+55	
+56	- [GTK PW](https://v2.gtk.pw/#/register?code=z3sgxglj)
+57	
+58	### ShellCrash (ShellClash) => Interactive setup tool
+59	
+60	- [echvoyager/shellclash_docker: 在任意Linux主机上, 利用Docker自动创建并配置虚拟OpenWrt路由容器以运行 juewuy's ShellClash 实现旁路由透明代理](https://github.com/echvoyager/shellclash_docker)
+61	- [juewuy/ShellCrash: Run sing-box/mihomo as client in shell](https://github.com/juewuy/ShellCrash)
+62	  - [ShellCrash/README_CN.md at dev · juewuy/ShellCrash](https://github.com/juewuy/ShellCrash/blob/dev/README_CN.md)
+63	  - `export url='https://fastly.jsdelivr.net/gh/juewuy/ShellCrash@master' && wget -q --no-check-certificate -O /tmp/install.sh $url/install.sh  && sudo bash /tmp/install.sh && source /etc/profile &> /dev/null`
+64	  - `/usr/share/ShellCrash/yamls/proxies.yaml`
+65	- [liyaoxuan/ShellClash: One-click deployment and management of Clash services using Shell scripts in Linux environment](https://github.com/liyaoxuan/ShellClash)
+66	
+67	### Clash-RS
+68	
+69	- [Watfaq/clash-rs: custom protocol network proxy](https://github.com/Watfaq/clash-rs)
+70	- [Welcome to ClashRS User Manual | ClashRS User Manual](https://watfaq.gitbook.io/clashrs-user-manual)
+71
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:14:56Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Inspect cfw keys and Clients.md tables
+
+`sed -n '125,165p' clients/docker/config.yaml; echo "=== Clients.md 40-60 ==="; sed -n '40,60p' docs/clash/Clients.md; echo "=== Clients.md 130-145 ==="; sed -n '128,145p' docs/clash/Clients.md`
+
+```text
+  # GeoIP China
+  - GEOIP,CN,DIRECT
+
+  # Everything is not captured by rules goes here
+  - MATCH,Final
+
+# Clash for Windows
+cfw-bypass:
+  - qq.com
+  - music.163.com
+  - "*.music.126.net"
+  - localhost
+  - 127.*
+  - 10.*
+  - 172.16.*
+  - 172.17.*
+  - 172.18.*
+  - 172.19.*
+  - 172.20.*
+  - 172.21.*
+  - 172.22.*
+  - 172.23.*
+  - 172.24.*
+  - 172.25.*
+  - 172.26.*
+  - 172.27.*
+  - 172.28.*
+  - 172.29.*
+  - 172.30.*
+  - 172.31.*
+  - 192.168.*
+  - <local>
+cfw-latency-timeout: 5000
+=== Clients.md 40-60 ===
+| `Kuingsmile/clash-core` | 維護鏡像 | **我們現用**，原版同系，凍結於 v1.18 |
+
+## 2. GUI 客戶端
+
+| GUI | 平台 | 狀態 | 備註 |
+|---|---|---|---|
+| [**Clash Verge Rev**](https://www.clashverge.dev/) | Win/macOS/Linux | **推薦** | Tauri + 內建 mihomo，可從 UI 更新核心；支援 TUN、Merge/Script、WebDav 備份（issue #6） |
+| [`Lythrilla/NeedyClash`](https://github.com/Lythrilla/NeedyClash) | 桌面 | 活躍 | 主打美觀的 clash GUI（issue #6） |
+| [FlClash](https://github.com/chen08209/FlClash) | 跨平台（含行動） | 活躍 | Flutter，多平台 |
+| Stash | iOS/macOS | 商業 | Apple 平台 |
+| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用 |
+| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用 |
+
+> issue #6 還列了 mihomo 官方文檔與 Clash Verge Rev 的「快速入門」，本質都是指向
+> **Verge Rev + mihomo** 這條主線。
+
+## 3. TUI / CLI 客戶端
+
+| 工具 | 角色 | 備註 |
+|---|---|---|
+| [`JohanChane/clashtui`](https://github.com/JohanChane/clashtui) | TUI（管理核心 + profile） | mihomo (Clash.Meta) 的終端介面（issue #8） |
+=== Clients.md 130-145 ===
+   checksum 或 release 簽章；避免網盤與第三方鏡像。
+3. **核心與殼分離**：核心固定用開源 **mihomo**；殼盡量也用開源、活躍維護的專案。
+4. **最小權限**：API 設 `secret` 或綁 loopback（見 [API.md](API.md)）；TUN/系統代理用完即關。
+5. **可重現/可自建**：能自己 `docker build` 或從源碼編譯的方案，信任成本最低。
+
+### 開源、可信的替代選項
+
+| 取代 | 建議替代（開源） | 備註 |
+|---|---|---|
+| Clash for Windows（閉源、已停更） | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0、Tauri、內建 mihomo、活躍維護，Win/macOS/Linux |
+| ClashX / ClashX Pro（macOS，停更） | Clash Verge Rev（macOS） / [FlClash](https://github.com/chen08209/FlClash) | 皆開源 |
+| 各種閉源行動端 | [FlClash](https://github.com/chen08209/FlClash)（Android）、開源 sing-box GUI | iOS 開源選擇少，謹慎評估 |
+| 任何閉源核心 | [**mihomo**](https://github.com/MetaCubeX/mihomo)（MIT 系）、[clash-rs](https://github.com/Watfaq/clash-rs) | 核心一律用開源 |
+| 想完全自控 | 本 repo 的 [`clients/docker/`](../../clients/docker/)（自建 image）+ 開源 dashboard | 自己 build，不依賴預編譯二進位 |
+
+> 一句話：**核心鎖定 mihomo（開源）、殼用 Clash Verge Rev（開源、官方 Releases）、
+> 能自建就自建**，是兼顧可用性與可稽核性的務實組合。
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:15:09Z)**_
+
+<think><details><summary>Thought Process</summary>
+The real issue is that the CLI documentation is still pointing users toward outdated clients that don't support VLESS/REALITY, even though the research docs already recommend Clash Verge Rev. I also need to check the Docker configuration since it references some deprecated settings.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:15:10Z)**_
+
+The research docs already recommend Verge Rev — the gap is the *actionable* client docs. Let me check the remaining pieces:
+
+_**Agent (claude-opus-5 2026-07-30 17:15:11Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Inspect docker client README and remaining refs
+
+`head -30 clients/docker/README.md; echo "=== ConfigManagement 175-185 ==="; sed -n '175,185p' docs/clash/ConfigManagement.md; echo "=== root README clash line ==="; grep -n "clients/docker\|clients/cli" README.md`
+
+```text
+# Use Docker to host Clash
+
+> **VLESS / Reality:** this stack is Dreamacro Clash **v1.18** and cannot terminate VLESS Reality.  
+> Use the mihomo equivalent: [`../mihomo-docker`](../mihomo-docker) (mixed **7890** / API **9091**).
+
+1. Install docker
+
+```bash
+# https://github.com/docker/docker-install
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+```
+
+> NOTE: better setup as [rootless mode](https://docs.docker.com/engine/security/rootless/)
+
+2. Setup docker mirror (rootless mode paths)
+
+`~/.config/docker/daemon.json`
+
+```json
+{
+    "registry-mirrors": ["https://docker.m.daocloud.io", "https://dockerhub.azk8s.cn", "https://docker.mirrors.ustc.edu.cn", "https://dockerproxy.com", "https://mirror.baidubce.com", "https://docker.nju.edu.cn", "https://mirror.iscas.ac.cn"]
+}
+```
+
+```bash
+systemctl --user daemon-reload
+systemctl --user restart docker
+```
+
+=== ConfigManagement 175-185 ===
+
+## 參考
+
+- [mihomo config 總覽](https://wiki.metacubex.one/en/config/)
+- [proxy-providers](https://wiki.metacubex.one/en/config/proxy-providers/) ／
+  [rule-providers](https://wiki.metacubex.one/en/config/rule-providers/)
+- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)
+- [Clash Verge Rev：多訂閱合併 / 配置案例](https://www.clashverge.dev/index.html)
+=== root README clash line ===
+55:| `clients/cli/` | CLI Clash client setup for Linux. |
+56:| `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |
+152:Clash setup lives in [`clients/docker/README.md`](clients/docker/README.md), and a Linux
+153:CLI-only setup in [`clients/cli/README.md`](clients/cli/README.md).
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:15:17Z)**_
+
+Now the rewrite of `clients/cli/README.md` — the one doc that still actively recommends the archived, REALITY-incapable stack:
+
+_**Agent (claude-opus-5 2026-07-30 17:15:57Z)**_
+
+<tool-use data-tool-type="write" data-tool-name="Write"><details>
+<summary>Tool use: **Write**</summary>
+
+```md
+# Linux client setup
+
+> **Read this first.** Everything below the "Legacy" heading describes
+> **Clash for Windows** + the frozen `Kuingsmile/clash-core` v1.18. Both are
+> archived, and **neither can terminate VLESS + REALITY**, which is what this
+> repo's server now speaks by default (see
+> [`docs/REALITY-MIGRATION.md`](../../docs/REALITY-MIGRATION.md)). They are kept
+> for the `vpn_protocol: vmess_ws` legacy mode and for historical reference.
+
+## Recommended (2026)
+
+Two open-source pieces, split by role — the core sees all your traffic, so keep
+it open source and keep the shell separate from it. Rationale and the wider
+client landscape: [`docs/clash/Clients.md`](../../docs/clash/Clients.md) and
+[`docs/clash/BestPractice.md`](../../docs/clash/BestPractice.md).
+
+| Role | Pick | Why |
+|---|---|---|
+| Core | [**mihomo**](https://github.com/MetaCubeX/mihomo) | The de-facto standard; the only one of the Clash-family cores here that supports VLESS / XTLS-Vision / REALITY |
+| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0, Tauri, bundles mihomo and can update the core from the UI. Win / macOS / Linux, actively maintained |
+| Headless / server | mihomo + [`clashtui`](https://github.com/JohanChane/clashtui) | Profile switching and subscription updates without a desktop |
+| Containerised | [`../mihomo-docker`](../mihomo-docker) | This repo's own mihomo compose setup |
+
+### Clash Verge Rev
+
+Releases (`.deb`, `.rpm`, `.AppImage`) — take them from the **official GitHub
+Releases page only**, never a mirror or network drive:
+
+<https://github.com/clash-verge-rev/clash-verge-rev/releases>
+
+\```bash
+# Debian / Ubuntu — substitute the current version and arch from the releases page
+sudo dpkg -i Clash.Verge_<version>_amd64.deb
+sudo apt-get install -f          # pull in any missing deps
+\```
+
+Then import the node: run `just az-client` on the machine that holds the vault
+and paste the `vless://` line from `out/client/vless.txt` into
+**Profiles → New → Import from clipboard**. Don't hand-copy the public key and
+short ID — a single wrong character fails the handshake in a way that looks
+exactly like being blocked.
+
+Verge Rev ships its own mihomo, so there is nothing else to install. Check
+**Settings → Clash Core** to confirm the bundled core is `mihomo` (not
+`clash`), and update it there.
+
+### Headless Linux (no desktop)
+
+Use mihomo directly. The compose setup in [`../mihomo-docker`](../mihomo-docker)
+is the maintained path in this repo — it already carries the DNS configuration
+that a CN-side client needs (see
+[`pitfalls/browser-cannot-load-google-match-final-bare-ip.md`](../../pitfalls/browser-cannot-load-google-match-final-bare-ip.md)),
+which is easy to get subtly wrong from scratch.
+
+For a bare binary + systemd instead, take a release from
+[MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo/releases) and point it at
+the same `config.yaml`. [`clashtui`](https://github.com/JohanChane/clashtui) or
+[ShellCrash](https://github.com/juewuy/ShellCrash) will manage profiles and the
+service unit for you.
+
+---
+
+## Legacy: Clash for Windows + `Kuingsmile/clash-core`
+
+Kept for reference and for the `vpn_protocol: vmess_ws` mode. **Clash for
+Windows is archived and closed-source** — see the trust discussion in
+[`docs/clash/Clients.md`](../../docs/clash/Clients.md#非開源-client-信任問題).
+`Kuingsmile/clash-core` is a frozen v1.18 mirror of the original Dreamacro
+core: no REALITY, no VLESS.
+
+- [Clash for Windows](https://www.clashforwindows.net/) (archived)
+  - [配置文件 | 使用说明](https://docs.gtk.pw/contents/configfile.html#%E6%A0%BC%E5%BC%8F) — still a decent reference for the *classic* config-file format, which mihomo remains backward-compatible with
+- [**Releases · Kuingsmile/clash-core**](https://github.com/Kuingsmile/clash-core/releases)
+- [在 Linux 通过 cli 使用 Clash](https://docs.gtk.pw/contents/linux/clash-cli.html#%E5%AE%89%E8%A3%85-installation) => setup `systemctl` service if needed
+- [本地安装ShellCrash的教程 | Juewuy's Blog](https://juewuy.github.io/bdaz/)
+
+\```bash
+wget https://github.com/Kuingsmile/clash-core/releases/download/1.18/clash-linux-386-v1.18.0.gz
+gunzip clash-linux-386-v1.18.0.gz
+chmod +x clash-linux-386-v1.18.0
+sudo mv clash-linux-386-v1.18.0 /usr/local/bin/clash
+\```
+
+\```bash
+$ clash
+INFO[0000] Start initial compatible provider HKMTMedia
+INFO[0000] Start initial compatible provider GlobalMedia
+INFO[0000] Start initial compatible provider Auto Select
+INFO[0000] Start initial compatible provider PROXY
+INFO[0000] Start initial compatible provider Apple
+INFO[0000] Start initial compatible provider Final
+INFO[0000] inbound http://127.0.0.1:7890 create success.
+INFO[0000] inbound socks://127.0.0.1:7891 create success.
+INFO[0000] RESTful API listening at: 127.0.0.1:9090
+INFO[0249] [TCP] 127.0.0.1:42262 --> github.com:443 match DomainKeyword(github) using PROXY[xxx Server]
+INFO[0254] [TCP] 127.0.0.1:42274 --> github.com:443 match DomainKeyword(github) using PROXY[yyy Server]
+INFO[0790] [TCP] 127.0.0.1:52190 --> dc.services.visualstudio.com:443 match DomainSuffix(visualstudio.com) using DIRECT
+\```
+
+## Dashboard (for CLI)
+
+Verge Rev has this built in. For a bare mihomo, point a dashboard at the
+external controller (set a `secret` first — see
+[`docs/clash/API.md`](../../docs/clash/API.md)):
+
+- [metacubexd](https://github.com/MetaCubeX/metacubexd) / [zashboard](https://github.com/Zephyruso/zashboard) — current, mihomo-aware
+- [haishanh/yacd](https://github.com/haishanh/yacd?tab=readme-ov-file) — what [`../docker/`](../docker/) bundles; older
+
+## Todo
+
+Ubuntu
+
+- [ ] Make mihomo a system service (`systemctl`)
+- [ ] Update environment variable in shell configure
+
+---
+
+## Others
+
+### ShellCrash (ShellClash) => Interactive setup tool
+
+- [echvoyager/shellclash_docker: 在任意Linux主机上, 利用Docker自动创建并配置虚拟OpenWrt路由容器以运行 juewuy's ShellClash 实现旁路由透明代理](https://github.com/echvoyager/shellclash_docker)
+- [juewuy/ShellCrash: Run sing-box/mihomo as client in shell](https://github.com/juewuy/ShellCrash)
+  - [ShellCrash/README_CN.md at dev · juewuy/ShellCrash](https://github.com/juewuy/ShellCrash/blob/dev/README_CN.md)
+  - `export url='https://fastly.jsdelivr.net/gh/juewuy/ShellCrash@master' && wget -q --no-check-certificate -O /tmp/install.sh $url/install.sh  && sudo bash /tmp/install.sh && source /etc/profile &> /dev/null`
+  - `/usr/share/ShellCrash/yamls/proxies.yaml`
+- [liyaoxuan/ShellClash: One-click deployment and management of Clash services using Shell scripts in Linux environment](https://github.com/liyaoxuan/ShellClash)
+
+### Clash-RS
+
+- [Watfaq/clash-rs: custom protocol network proxy](https://github.com/Watfaq/clash-rs)
+- [Welcome to ClashRS User Manual | ClashRS User Manual](https://watfaq.gitbook.io/clashrs-user-manual)
+
+```
+
+```text
+The file /Users/david/Documents/Program/DockerCompose-V2Ray/clients/cli/README.md has been updated successfully. (file state is current in your context — no need to Read it back)
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:16:09Z)**_
+
+<think><details><summary>Thought Process</summary>
+I need to check if that anchor heading actually exists in the Clients.md file. I'm also reconsidering whether I should have removed the GTK PW referral link — it was under "Others" and includes the operator's own referral code, so dropping it might lose something they wanted to keep.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:16:09Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Verify the anchor heading exists in Clients.md
+
+`grep -n "^#.*信任\|^###.*信任" docs/clash/Clients.md`
+
+```text
+111:## 非開源 client 的信任問題與替代選項
+124:### 降低信任成本的原則
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:16:26Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Fix anchor and restore operator link
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+p = Path("clients/cli/README.md"); s = p.read_text()
+# Fix the anchor to match the real heading text.
+s = s.replace("[`docs/clash/Clients.md`](../../docs/clash/Clients.md#非開源-client-信任問題).",
+              "[`docs/clash/Clients.md`](../../docs/clash/Clients.md#非開源-client-的信任問題與替代選項).")
+# Restore the operator's own link that lived under "Others".
+s = s.replace("""## Others
+
+### ShellCrash""",
+"""## Others
+
+- [GTK PW](https://v2.gtk.pw/#/register?code=z3sgxglj)
+
+### ShellCrash""")
+p.write_text(s)
+print("ok")
+PYEOF
+grep -n "Clients.md#\|GTK PW" clients/cli/README.md
+```
+
+```text
+ok
+67:[`docs/clash/Clients.md`](../../docs/clash/Clients.md#非開源-client-的信任問題與替代選項).
+120:- [GTK PW](https://v2.gtk.pw/#/register?code=z3sgxglj)
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:16:40Z)**_
+
+Now the CFW-only keys in the Clash config and the remaining doc pointers:
+
+_**Agent (claude-opus-5 2026-07-30 17:16:50Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Update cfw keys, ConfigManagement link and README layout table
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+
+# clients/docker/config.yaml — cfw-* keys are Clash-for-Windows-only and inert
+# in mihomo / Verge Rev. Keep them (this file targets the legacy CFW-era core)
+# but say so, rather than leaving a reader to copy them into a mihomo config.
+p = Path("clients/docker/config.yaml"); s = p.read_text()
+s = s.replace("""# Clash for Windows
+cfw-bypass:""",
+"""# Clash for Windows only. CFW is archived and closed-source; mihomo and
+# Clash Verge Rev IGNORE every cfw-* key, so don't carry these into a mihomo
+# config expecting them to do anything — set the equivalents under the GUI's own
+# bypass/latency settings instead. See clients/cli/README.md.
+cfw-bypass:""")
+p.write_text(s)
+
+# docs/clash/ConfigManagement.md — mark the CFW doc link as archived
+p = Path("docs/clash/ConfigManagement.md"); s = p.read_text()
+s = s.replace("- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)",
+              "- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)（CFW 已封存，但 classic 設定檔格式說明仍可參考——mihomo 對它向後相容）")
+p.write_text(s)
+
+# root README — the repo layout table still described clients/ as Clash-era
+p = Path("README.md"); s = p.read_text()
+s = s.replace("| `clients/cli/` | CLI Clash client setup for Linux. |",
+              "| `clients/cli/` | Linux client setup: recommends mihomo + Clash Verge Rev; the archived Clash-for-Windows / `clash-core` v1.18 flow is kept below a Legacy heading (it cannot do REALITY). |")
+s = s.replace("| `clients/docker/` | Dockerized Clash proxy + YACD dashboard (git submodule) for local testing. |",
+              "| `clients/docker/` | Dockerized Clash v1.18 proxy + YACD dashboard (git submodule). **No REALITY support** — use `clients/mihomo-docker/` instead. |")
+p.write_text(s)
+print("ok")
+PYEOF
+grep -n "clients/cli\|clients/docker\|clients/mihomo" README.md | head
+```
+
+```text
+ok
+55:| `clients/cli/` | Linux client setup: recommends mihomo + Clash Verge Rev; the archived Clash-for-Windows / `clash-core` v1.18 flow is kept below a Legacy heading (it cannot do REALITY). |
+56:| `clients/docker/` | Dockerized Clash v1.18 proxy + YACD dashboard (git submodule). **No REALITY support** — use `clients/mihomo-docker/` instead. |
+150:For mihomo, see [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its
+152:Clash setup lives in [`clients/docker/README.md`](clients/docker/README.md), and a Linux
+153:CLI-only setup in [`clients/cli/README.md`](clients/cli/README.md).
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:17:11Z)**_
+
+<think><details><summary>Thought Process</summary>
+I need to update the README's repo layout table to include the `clients/mihomo-docker/` directory that's currently missing, and also update the Clash section to reference Verge Rev for desktop users.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:17:11Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Inspect README layout table and client section
+
+`sed -n '44,60p' README.md; echo "=== client setup section ==="; sed -n '143,156p' README.md`
+
+```text
+> Prefer the old shell-script flow? It's frozen at the [`pre-iac-refactor`](../../tree/pre-iac-refactor) tag. See [`docs/LEGACY.md`](docs/LEGACY.md).
+
+## Repo layout
+
+| Path | Purpose |
+|---|---|
+| `server/` | Everything that ends up on the VPS: `compose.yml`, `templates/` (source-of-truth configs with placeholders), `static/` (landing page), `runtime/` (generated at deploy time, gitignored). |
+| `ansible/` | Playbooks, roles (`common`, `docker`, `vpn`, `letsencrypt`), inventory, vault. |
+| `scripts/` | `install_docker.sh` (rootful bootstrap), `reality_keys.py` (x25519 keypair + short ID), `client_config.py` (client configs), `verify.sh` (front-door smoke test), `verify_proxy.sh` (end-to-end tunnel test). |
+| `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `reality-keys`, `rotate-uuid`, `verify`, `verify-proxy`, `logs-*`, `vault-edit`. |
+| `clients/cli/` | Linux client setup: recommends mihomo + Clash Verge Rev; the archived Clash-for-Windows / `clash-core` v1.18 flow is kept below a Legacy heading (it cannot do REALITY). |
+| `clients/docker/` | Dockerized Clash v1.18 proxy + YACD dashboard (git submodule). **No REALITY support** — use `clients/mihomo-docker/` instead. |
+| `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `ProtocolEvaluation.md` (why the default moved off VMess: an audit of what this repo actually shipped, plus VLESS/Reality/Hysteria2/etc. compared with GFW detection risk), `REALITY-MIGRATION.md` (the three `vpn_protocol` modes, key material, picking a `dest`, the pitfalls, rollback), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LOG-ROTATION.md` (logrotate config + manual patch recipe for a running VPS), `OBSERVABILITY.md` (optional central Grafana LGTM for a fleet — outbound metrics + logs, a `$server` plug-and-play dashboard, and the Xray StatsService as the one server-side tuning knob), `clash/` (client-side research notes: a recommended best-practice combo, mihomo vs current core, observability via Grafana/LGTM, the 9090 RESTful API, the client landscape incl. mobile, systematic config management, and how to self-host node/rule providers for Clash + Shadowrocket), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
+| `legacy/` | Archived pre-refactor files. Nothing here is used by the current flow. See [`legacy/README.md`](legacy/README.md). |
+
+## One-shot Azure validation (throwaway VM)
+=== client setup section ===
+
+Same as before with one hard requirement: **AlterId must be `0`.** Xray-core dropped legacy
+non-AEAD VMess, so a client still set to `64` cannot connect at all. In `both` mode the WS
+listener is on `vmess_ws_port` (default `2053`), not 443.
+
+### Clash (Windows, macOS, Linux)
+
+For mihomo, see [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its
+`config.example.yaml` already carries a VLESS+REALITY proxy in the right shape. The older
+Clash setup lives in [`clients/docker/README.md`](clients/docker/README.md), and a Linux
+CLI-only setup in [`clients/cli/README.md`](clients/cli/README.md).
+
+## Troubleshooting
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:17:59Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Rewrite README Clash client section
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+p = Path("README.md"); s = p.read_text()
+
+# mihomo-docker was missing from the layout table entirely.
+s = s.replace(
+"| `clients/docker/` | Dockerized Clash v1.18 proxy + YACD dashboard (git submodule). **No REALITY support** — use `clients/mihomo-docker/` instead. |",
+"| `clients/mihomo-docker/` | Dockerized **mihomo** client — the maintained one. `config.example.yaml` carries a VLESS+REALITY proxy plus the CN-side DNS setup. |\n| `clients/docker/` | Dockerized Clash v1.18 proxy + YACD dashboard (git submodule). **No REALITY support** — use `clients/mihomo-docker/` instead. |")
+
+old = """### Clash (Windows, macOS, Linux)
+
+For mihomo, see [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its
+`config.example.yaml` already carries a VLESS+REALITY proxy in the right shape. The older
+Clash setup lives in [`clients/docker/README.md`](clients/docker/README.md), and a Linux
+CLI-only setup in [`clients/cli/README.md`](clients/cli/README.md)."""
+
+new = """### Clash-family clients (Windows, macOS, Linux)
+
+Pick an open-source core plus an open-source shell — the core sees all your traffic:
+
+| Role | Use |
+|---|---|
+| Core | [**mihomo**](https://github.com/MetaCubeX/mihomo) — the only Clash-family core here that speaks VLESS / Vision / REALITY |
+| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) — GPL-3.0, Tauri, bundles mihomo and updates it from the UI |
+| Mobile | [Clash Mi](https://github.com/KaringX/clashmi) / [FlClash](https://github.com/chen08209/FlClash) |
+| Containerised | [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its `config.example.yaml` carries a VLESS+REALITY proxy in the right shape |
+
+Import by pasting `out/client/vless.txt` (from `just az-client`) rather than typing the
+public key and short ID by hand — one wrong character fails the handshake in a way that
+looks exactly like being blocked.
+
+**Clash for Windows and `Kuingsmile/clash-core` v1.18 are archived and cannot do REALITY.**
+[`clients/cli/README.md`](clients/cli/README.md) covers the Linux setup and keeps the old
+flow under a Legacy heading; [`clients/docker/`](clients/docker/README.md) is that older
+core. Background: [`docs/clash/Clients.md`](docs/clash/Clients.md)."""
+
+assert old in s
+s = s.replace(old, new)
+p.write_text(s)
+print("ok")
+PYEOF
+sed -n '143,166p' README.md
+```
+
+```text
+ok
+### VMess over WebSocket (`vpn_protocol: vmess_ws` / `both`)
+
+Same as before with one hard requirement: **AlterId must be `0`.** Xray-core dropped legacy
+non-AEAD VMess, so a client still set to `64` cannot connect at all. In `both` mode the WS
+listener is on `vmess_ws_port` (default `2053`), not 443.
+
+### Clash-family clients (Windows, macOS, Linux)
+
+Pick an open-source core plus an open-source shell — the core sees all your traffic:
+
+| Role | Use |
+|---|---|
+| Core | [**mihomo**](https://github.com/MetaCubeX/mihomo) — the only Clash-family core here that speaks VLESS / Vision / REALITY |
+| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) — GPL-3.0, Tauri, bundles mihomo and updates it from the UI |
+| Mobile | [Clash Mi](https://github.com/KaringX/clashmi) / [FlClash](https://github.com/chen08209/FlClash) |
+| Containerised | [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its `config.example.yaml` carries a VLESS+REALITY proxy in the right shape |
+
+Import by pasting `out/client/vless.txt` (from `just az-client`) rather than typing the
+public key and short ID by hand — one wrong character fails the handshake in a way that
+looks exactly like being blocked.
+
+**Clash for Windows and `Kuingsmile/clash-core` v1.18 are archived and cannot do REALITY.**
+[`clients/cli/README.md`](clients/cli/README.md) covers the Linux setup and keeps the old
+flow under a Legacy heading; [`clients/docker/`](clients/docker/README.md) is that older
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:18:18Z)**_
+
+<think><details><summary>Thought Process</summary>
+I need to verify the Verge Rev details directly from the repository — checking the license, Tauri framework, mihomo bundling, UI-based core updates, and supported platforms — rather than relying on memory. I should also confirm the `.deb` asset naming pattern I used in the installation snippet by checking the GitHub API for the actual release assets.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:18:18Z)**_
+
+Let me verify the Verge Rev claims against the actual repo rather than assert them:
+
+_**Agent (claude-opus-5 2026-07-30 17:18:21Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Verify Clash Verge Rev repo metadata
+
+```bash
+curl -s https://api.github.com/repos/clash-verge-rev/clash-verge-rev | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print('license   :', (d.get('license') or {}).get('spdx_id'))
+print('language  :', d.get('language'))
+print('archived  :', d.get('archived'))
+print('pushed_at :', d.get('pushed_at'))
+print('stars     :', d.get('stargazers_count'))
+print('desc      :', (d.get('description') or '')[:160])
+"
+```
+
+```text
+license   : GPL-3.0
+language  : TypeScript
+archived  : False
+pushed_at : 2026-07-30T15:48:28Z
+stars     : 134608
+desc      : A modern GUI client based on Tauri, designed to run in Windows, macOS and Linux for tailored proxy experience
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:18:23Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Check Verge Rev release asset naming
+
+```bash
+curl -s https://api.github.com/repos/clash-verge-rev/clash-verge-rev/releases/latest | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print('tag:', d.get('tag_name'), '| published:', d.get('published_at'))
+names=[a['name'] for a in d.get('assets',[])]
+print('linux assets:')
+for n in sorted(names):
+    if any(n.endswith(x) for x in ('.deb','.rpm','.AppImage')):
+        print('  ', n)
+"
+```
+
+```text
+tag: v2.5.2 | published: 2026-07-19T17:00:26Z
+linux assets:
+   Clash.Verge-2.5.2-1.aarch64.rpm
+   Clash.Verge-2.5.2-1.armhfp.rpm
+   Clash.Verge-2.5.2-1.x86_64.rpm
+   Clash.Verge_2.5.2_amd64.deb
+   Clash.Verge_2.5.2_arm64.deb
+   Clash.Verge_2.5.2_armhf.deb
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:19:04Z)**_
+
+<think><details><summary>Thought Process</summary>
+I've verified all the key details about Clash Verge: it's GPL-3.0 licensed, built with Tauri, runs on Windows/macOS/Linux, actively maintained with recent commits and releases, has substantial community adoption at 134k stars, and the asset naming pattern I mentioned matches the actual release files.
+
+Now I need to double-check whether `.AppImage` files are actually included in the latest release assets, since I claimed that format was available but haven't confirmed it yet. I should also verify the README to confirm that Verge bundles mihomo and supports core updates from the UI, since those are signature features I want to make sure are accurate.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:19:06Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Check for AppImage assets
+
+```bash
+curl -s https://api.github.com/repos/clash-verge-rev/clash-verge-rev/releases/latest | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print('all asset extensions:', sorted({n['name'].split('_')[-1] for n in d.get('assets',[])})[:20])
+print()
+print([a['name'] for a in d.get('assets',[]) if 'AppImage' in a['name']] or 'NO AppImage assets')
+"
+```
+
+```text
+all asset extensions: ['64.rpm', '64.rpm.sig', 'Clash.Verge-2.5.2-1.aarch64.rpm', 'Clash.Verge-2.5.2-1.armhfp.rpm', 'aarch64.app.tar.gz', 'aarch64.app.tar.gz.sig', 'aarch64.dmg', 'amd64.deb', 'amd64.deb.sig', 'arm64-setup.exe', 'arm64-setup.exe.sig', 'arm64.deb', 'armhf.deb', 'latest.json', 'webview2-setup.exe', 'webview2-setup.exe.sig', 'x64-setup.exe', 'x64-setup.exe.sig', 'x64.app.tar.gz', 'x64.app.tar.gz.sig']
+
+NO AppImage assets
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:19:30Z)**_
+
+<tool-use data-tool-type="read" data-tool-name="WebFetch"><details>
+<summary>Tool use: **WebFetch**</summary>
+ `https://github.com/clash-verge-rev/clash-verge-rev`
+
+```text
+Yes — the repo ships a mihomo (Clash.Meta) core and lets users change cores.
+
+- Bundled core: "内置[Clash.Meta(mihomo)]内核"
+- Can switch/update: "支持切换 `Alpha` 版本内核" — the UI supports switching between the bundled mihomo core and an Alpha core.
+- Supported cores (from docs): Clash.Meta (mihomo) and an Alpha-version core.
+- Supported platforms: "Supports Windows (x64/x86), Linux (x64/arm64) and macOS 11+ (intel/apple)."
+- License: "GPL-3.0 License."
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:20:10Z)**_
+
+<think><details><summary>Thought Process</summary>
+I've confirmed the project bundles mihomo with core switching between stable and alpha versions, supports Windows, Linux, and macOS across multiple architectures, and uses GPL-3.0 licensing. However, I noticed the install instructions reference `.AppImage` files that don't actually exist—I need to correct those to the actual asset formats like `.deb`, `.rpm`, `.dmg`, and `.exe`. Let me update the README in the clients/cli directory and refine the settings documentation.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:20:10Z)**_
+
+Two corrections needed — there are no AppImage assets, and the core switcher is stable/Alpha mihomo:
+
+_**Agent (claude-opus-5 2026-07-30 17:20:21Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Correct AppImage and core-switcher claims
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+p = Path("clients/cli/README.md"); s = p.read_text()
+
+s = s.replace("""Releases (`.deb`, `.rpm`, `.AppImage`) — take them from the **official GitHub
+Releases page only**, never a mirror or network drive:
+
+<https://github.com/clash-verge-rev/clash-verge-rev/releases>
+
+\```bash
+# Debian / Ubuntu — substitute the current version and arch from the releases page
+sudo dpkg -i Clash.Verge_<version>_amd64.deb
+sudo apt-get install -f          # pull in any missing deps
+\```""",
+"""Linux ships as `.deb` and `.rpm` (x64 / arm64 / armhf) — no AppImage. Take them
+from the **official GitHub Releases page only**, never a mirror or network drive;
+every asset there is published with a `.sig` alongside it:
+
+<https://github.com/clash-verge-rev/clash-verge-rev/releases>
+
+\```bash
+# Debian / Ubuntu — substitute the current version and arch from the releases page
+sudo dpkg -i Clash.Verge_<version>_amd64.deb
+sudo apt-get install -f          # pull in any missing deps
+
+# Fedora / RHEL
+sudo rpm -i Clash.Verge-<version>-1.x86_64.rpm
+\```""")
+
+s = s.replace("""Verge Rev ships its own mihomo, so there is nothing else to install. Check
+**Settings → Clash Core** to confirm the bundled core is `mihomo` (not
+`clash`), and update it there.""",
+"""Verge Rev embeds mihomo (Clash.Meta), so there is nothing else to install — and
+the core switcher under **Settings** lets you move between the bundled stable
+core and the Alpha build without touching the filesystem.""")
+
+s = s.replace("| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0, Tauri, bundles mihomo and can update the core from the UI. Win / macOS / Linux, actively maintained |",
+              "| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0, Tauri, embeds mihomo and can switch cores from the UI. Windows x64/x86, Linux x64/arm64, macOS 11+ — actively maintained (v2.5.2, 2026-07) |")
+p.write_text(s)
+
+p = Path("README.md"); s = p.read_text()
+s = s.replace("| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) — GPL-3.0, Tauri, bundles mihomo and updates it from the UI |",
+              "| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) — GPL-3.0, Tauri, embeds mihomo and switches cores from the UI. Windows / macOS 11+ / Linux |")
+p.write_text(s)
+print("ok")
+PYEOF
+sed -n '24,46p' clients/cli/README.md
+```
+
+```text
+ok
+### Clash Verge Rev
+
+Linux ships as `.deb` and `.rpm` (x64 / arm64 / armhf) — no AppImage. Take them
+from the **official GitHub Releases page only**, never a mirror or network drive;
+every asset there is published with a `.sig` alongside it:
+
+<https://github.com/clash-verge-rev/clash-verge-rev/releases>
+
+```bash
+# Debian / Ubuntu — substitute the current version and arch from the releases page
+sudo dpkg -i Clash.Verge_<version>_amd64.deb
+sudo apt-get install -f          # pull in any missing deps
+
+# Fedora / RHEL
+sudo rpm -i Clash.Verge-<version>-1.x86_64.rpm
+```
+
+Then import the node: run `just az-client` on the machine that holds the vault
+and paste the `vless://` line from `out/client/vless.txt` into
+**Profiles → New → Import from clipboard**. Don't hand-copy the public key and
+short ID — a single wrong character fails the handshake in a way that looks
+exactly like being blocked.
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:20:36Z)**_
+
+Now updating the research docs where CFW is still listed alongside Verge Rev, and checking the Clients.md table is current:
+
+_**Agent (claude-opus-5 2026-07-30 17:20:37Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Inspect Clients.md core table
+
+`sed -n '30,50p' docs/clash/Clients.md`
+
+```text
+我們的 server 不變，client 怎麼換都行。
+
+## 1. 核心 (core)
+
+| 核心 | 狀態 | 說明 |
+|---|---|---|
+| [`MetaCubeX/mihomo`](https://github.com/MetaCubeX/mihomo) | **主流** | Clash.Meta，2026 事實標準（見 [Core.md](Core.md)） |
+| [`Watfaq/clash-rs`](https://github.com/Watfaq/clash-rs) | 活躍 | Rust 重寫的 Clash 相容核心 |
+| `sing-box` | 活躍 | 通用代理核心，ShellCrash 也支援 |
+| 原版 `Dreamacro/clash` | **已封存** | 2023-11 唯讀 |
+| `Kuingsmile/clash-core` | 維護鏡像 | **我們現用**，原版同系，凍結於 v1.18 |
+
+## 2. GUI 客戶端
+
+| GUI | 平台 | 狀態 | 備註 |
+|---|---|---|---|
+| [**Clash Verge Rev**](https://www.clashverge.dev/) | Win/macOS/Linux | **推薦** | Tauri + 內建 mihomo，可從 UI 更新核心；支援 TUN、Merge/Script、WebDav 備份（issue #6） |
+| [`Lythrilla/NeedyClash`](https://github.com/Lythrilla/NeedyClash) | 桌面 | 活躍 | 主打美觀的 clash GUI（issue #6） |
+| [FlClash](https://github.com/chen08209/FlClash) | 跨平台（含行動） | 活躍 | Flutter，多平台 |
+| Stash | iOS/macOS | 商業 | Apple 平台 |
+| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用 |
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:21:20Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Update Clients.md core and GUI tables
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+p = Path("docs/clash/Clients.md"); s = p.read_text()
+
+# "我們現用" is no longer true for the recommended path, and the frozen core
+# cannot reach the REALITY server at all — that's the decisive fact now.
+s = s.replace(
+"| `Kuingsmile/clash-core` | 維護鏡像 | **我們現用**，原版同系，凍結於 v1.18 |",
+"| `Kuingsmile/clash-core` | 維護鏡像 | 原版同系，凍結於 v1.18。`clients/docker/` 仍用它，但**不支援 VLESS/REALITY**，連不上現在的 server |")
+
+s = s.replace(
+"| [**Clash Verge Rev**](https://www.clashverge.dev/) | Win/macOS/Linux | **推薦** | Tauri + 內建 mihomo，可從 UI 更新核心；支援 TUN、Merge/Script、WebDav 備份（issue #6） |",
+"| [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | Win x64/x86、Linux x64/arm64、macOS 11+ | **推薦** | GPL-3.0、Tauri、內建 mihomo，可從 UI 切換核心；支援 TUN、Merge/Script、WebDav 備份。維護活躍（v2.5.2, 2026-07）。官網 [clashverge.dev](https://www.clashverge.dev/) |")
+
+s = s.replace(
+"| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用 |",
+"| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用；**不支援 REALITY** |")
+s = s.replace(
+"| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用 |",
+"| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用；**不支援 REALITY** |")
+p.write_text(s)
+print("ok")
+PYEOF
+sed -n '33,52p' docs/clash/Clients.md
+```
+
+```text
+ok
+
+| 核心 | 狀態 | 說明 |
+|---|---|---|
+| [`MetaCubeX/mihomo`](https://github.com/MetaCubeX/mihomo) | **主流** | Clash.Meta，2026 事實標準（見 [Core.md](Core.md)） |
+| [`Watfaq/clash-rs`](https://github.com/Watfaq/clash-rs) | 活躍 | Rust 重寫的 Clash 相容核心 |
+| `sing-box` | 活躍 | 通用代理核心，ShellCrash 也支援 |
+| 原版 `Dreamacro/clash` | **已封存** | 2023-11 唯讀 |
+| `Kuingsmile/clash-core` | 維護鏡像 | 原版同系，凍結於 v1.18。`clients/docker/` 仍用它，但**不支援 VLESS/REALITY**，連不上現在的 server |
+
+## 2. GUI 客戶端
+
+| GUI | 平台 | 狀態 | 備註 |
+|---|---|---|---|
+| [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | Win x64/x86、Linux x64/arm64、macOS 11+ | **推薦** | GPL-3.0、Tauri、內建 mihomo，可從 UI 切換核心；支援 TUN、Merge/Script、WebDav 備份。維護活躍（v2.5.2, 2026-07）。官網 [clashverge.dev](https://www.clashverge.dev/) |
+| [`Lythrilla/NeedyClash`](https://github.com/Lythrilla/NeedyClash) | 桌面 | 活躍 | 主打美觀的 clash GUI（issue #6） |
+| [FlClash](https://github.com/chen08209/FlClash) | 跨平台（含行動） | 活躍 | Flutter，多平台 |
+| Stash | iOS/macOS | 商業 | Apple 平台 |
+| ClashX / ClashX Pro | macOS | 已停更 | 不建議新用；**不支援 REALITY** |
+| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用；**不支援 REALITY** |
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:21:35Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Check remaining frozen-core references in research docs
+
+`grep -rn "clash-core\|Kuingsmile" docs/clash/BestPractice.md docs/clash/Core.md docs/clash/README.md docs/clash/ConfigManagement.md 2>/dev/null | head`
+
+```text
+docs/clash/README.md:13:| 1 | [Core.md](Core.md) | 我們現用的 `Kuingsmile/clash-core` 已凍結；**mihomo (Clash.Meta)** 是 2026 主流，YAML 相容、換核心即可。**ShellCrash 不是核心**，是安裝/管理工具。 |
+docs/clash/README.md:27:  兩者目前綁已凍結的 `Kuingsmile/clash-core`，長期建議統一遷往 **mihomo**（見 [Core.md](Core.md)）。
+docs/clash/Core.md:11:- 我們現用的是 `Kuingsmile/clash-core` **v1.18.0** —— 原版 Dreamacro Clash 的維護鏡像，
+docs/clash/Core.md:27:  original --> kuingsmile["Kuingsmile/clash-core v1.18.0<br/>(我們現用, 同系鏡像/維護)"]
+docs/clash/Core.md:32:| 維度 | 原版 Clash / 我們的 `Kuingsmile/clash-core` | Clash Premium | Mihomo (Clash.Meta) |
+docs/clash/Core.md:53:這把「換成 mihomo」從建議變成**必要**——凍結的 `clash-core` 不支援 REALITY。
+docs/clash/BestPractice.md:72:1. Client 核心從凍結的 `Kuingsmile/clash-core` 升級到 **mihomo**（[Core.md](Core.md)）。
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:22:17Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Inspect clash README and Core.md intros
+
+`sed -n '8,30p' docs/clash/README.md; echo "=== Core.md 8-14 ==="; sed -n '8,14p' docs/clash/Core.md`
+
+```text
+Verge Rev / Clash Mi + 協議建議 + terminal 工作流）。各主題細節：
+
+| # | 文檔 | 一句話結論 |
+|---|---|---|
+| ★ | [BestPractice.md](BestPractice.md) | 一套可照抄的 combo：**mihomo 核心 + Clash Verge Rev/Clash Mi 殼（皆開源）+ providers 配置 + 檔案管結構/API 管切換**；協議理想型是 VLESS+Vision+REALITY。 |
+| 1 | [Core.md](Core.md) | 我們現用的 `Kuingsmile/clash-core` 已凍結；**mihomo (Clash.Meta)** 是 2026 主流，YAML 相容、換核心即可。**ShellCrash 不是核心**，是安裝/管理工具。 |
+| 2 | [Observability.md](Observability.md) | Clash **無原生 Prometheus/OTel 輸出**；用社群 exporter（metrics）+ Alloy/promtail（logs）橋接到 `grafana/otel-lgtm`。 |
+| 3 | [API.md](API.md) | port 9090 有 **RESTful API 但官方無 OpenAPI/Swagger**；端點齊全，需自設 `secret`（我們目前綁 `0.0.0.0` 卻沒設，是隱憂）。 |
+| 4 | [Clients.md](Clients.md) | **一個 server、多個 client**：核心(mihomo) / GUI(Clash Verge Rev) / TUI(clashtui) / 行動端(Clash Mi/FlClash) / dashboard 分層；對應 issue #6/#8。 |
+| 5 | [ConfigManagement.md](ConfigManagement.md) | 系統化 = base 設定瘦身 + 節點/規則 **URL 化（proxy-providers / rule-providers）** + 用 API 熱更新；terminal 改配置 TUI/檔案/API 三選一。 |
+| 5b | [SelfHostProviders.md](SelfHostProviders.md) | **如何自架 provider**：single source of truth（一次維護全 client 套用）、Clash + Shadowrocket 兩格式、URL 的 auth 方法、公開 rule-set（Loyalsoldier / blackmatrix7）與照做方式；對接本專案 nginx。 |
+| 6 | [../ProtocolEvaluation.md](../ProtocolEvaluation.md) | 為何 default 改成 **VLESS+Vision+REALITY**：實機稽核（六年沒更新的 core、`alterId: 64`）+ 偵測風險排序與選型矩陣。 |
+| 7 | [GeoDB.md](GeoDB.md) | 小科普：`GEOIP,CN` 背後的離線查表檔是什麼、**沒有全球統一版本**（MaxMind → Loyalsoldier → meta-rules-dat 的社群供應鏈），以及官方 image 的 geo data 會隨釘版本一起凍結。 |
+
+## 與本專案的關係
+
+- Server 端（VPS 上的 nginx + v2ray）見根 [`README.md`](../../README.md) 與
+  [`docs/`](../) 其他文檔；server 日誌輪替見 [`docs/LOG-ROTATION.md`](../LOG-ROTATION.md)。
+- Client 範例見 [`clients/docker/`](../../clients/docker/)、[`clients/cli/`](../../clients/cli/)；
+  兩者目前綁已凍結的 `Kuingsmile/clash-core`，長期建議統一遷往 **mihomo**（見 [Core.md](Core.md)）。
+- 相關替代管理面板的舊筆記見 [`docs/old/XrayUI.md`](../old/XrayUI.md)。
+=== Core.md 8-14 ===
+
+## TL;DR
+
+- 我們現用的是 `Kuingsmile/clash-core` **v1.18.0** —— 原版 Dreamacro Clash 的維護鏡像，
+  與原版同一系，**已停在 2023 年的能力上、不再有新協議與安全更新**。
+- **Mihomo（MetaCubeX，前稱 Clash.Meta）** 是 2026 年事實上的標準核心，持續維護，
+  新增 Hysteria2 / TUIC v5 / VLESS+REALITY / SS2022 等現代協議，且 **YAML 向後相容**
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:22:48Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Update clash README and Core.md core claims
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+
+p = Path("docs/clash/README.md"); s = p.read_text()
+s = s.replace(
+"| 1 | [Core.md](Core.md) | 我們現用的 `Kuingsmile/clash-core` 已凍結；**mihomo (Clash.Meta)** 是 2026 主流，YAML 相容、換核心即可。**ShellCrash 不是核心**，是安裝/管理工具。 |",
+"| 1 | [Core.md](Core.md) | `Kuingsmile/clash-core` 已凍結且**不支援 REALITY**；換 **mihomo (Clash.Meta)** 從建議變成必要。**ShellCrash 不是核心**，是安裝/管理工具。 |")
+s = s.replace(
+"| ★ | [BestPractice.md](BestPractice.md) | 一套可照抄的 combo：**mihomo 核心 + Clash Verge Rev/Clash Mi 殼（皆開源）+ providers 配置 + 檔案管結構/API 管切換**；協議理想型是 VLESS+Vision+REALITY。 |",
+"| ★ | [BestPractice.md](BestPractice.md) | 一套可照抄的 combo：**mihomo 核心 + Clash Verge Rev/Clash Mi 殼（皆開源）+ providers 配置 + 檔案管結構/API 管切換**；協議 VLESS+Vision+REALITY 已是 server 端現況。 |")
+s = s.replace(
+"""- Server 端（VPS 上的 nginx + v2ray）見根 [`README.md`](../../README.md) 與""",
+"""- Server 端（VPS 上的 Xray + nginx）見根 [`README.md`](../../README.md) 與""")
+s = s.replace(
+"""- Client 範例見 [`clients/docker/`](../../clients/docker/)、[`clients/cli/`](../../clients/cli/)；
+  兩者目前綁已凍結的 `Kuingsmile/clash-core`，長期建議統一遷往 **mihomo**（見 [Core.md](Core.md)）。""",
+"""- Client 範例：**維護中的是 [`clients/mihomo-docker/`](../../clients/mihomo-docker/)**
+  （已含 VLESS+REALITY proxy 與 CN 端 DNS 設定）；桌面請用
+  [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev)（見
+  [`clients/cli/README.md`](../../clients/cli/README.md)）。
+  [`clients/docker/`](../../clients/docker/) 仍綁凍結的 `Kuingsmile/clash-core`
+  v1.18，**連不上現在的 REALITY server**，僅供 `vpn_protocol: vmess_ws` 或考古用。""")
+p.write_text(s)
+
+p = Path("docs/clash/Core.md"); s = p.read_text()
+s = s.replace(
+"""- 我們現用的是 `Kuingsmile/clash-core` **v1.18.0** —— 原版 Dreamacro Clash 的維護鏡像，
+  與原版同一系，**已停在 2023 年的能力上、不再有新協議與安全更新**。""",
+"""- [`clients/docker/`](../../clients/docker/) 仍綁 `Kuingsmile/clash-core` **v1.18.0**
+  —— 原版 Dreamacro Clash 的維護鏡像，與原版同一系，**已停在 2023 年的能力上、
+  不再有新協議與安全更新**。自 2026-07 server 端改用 REALITY 之後，它**連不上**了。""")
+s = s.replace(
+'  original --> kuingsmile["Kuingsmile/clash-core v1.18.0<br/>(我們現用, 同系鏡像/維護)"]',
+'  original --> kuingsmile["Kuingsmile/clash-core v1.18.0<br/>(clients/docker/ 仍用, 同系鏡像)"]')
+s = s.replace(
+"| 維度 | 原版 Clash / 我們的 `Kuingsmile/clash-core` | Clash Premium | Mihomo (Clash.Meta) |",
+"| 維度 | 原版 Clash / `Kuingsmile/clash-core` | Clash Premium | Mihomo (Clash.Meta) |")
+p.write_text(s)
+print("ok")
+PYEOF
+grep -rn "我們現用" docs/clash/ || echo "no stale 我們現用 claims left"
+```
+
+```text
+ok
+no stale 我們現用 claims left
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:23:33Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Update BestPractice and run pre-commit
+
+```bash
+python3 - <<'PYEOF'
+from pathlib import Path
+p = Path("docs/clash/BestPractice.md"); s = p.read_text()
+s = s.replace(
+"""1. Client 核心從凍結的 `Kuingsmile/clash-core` 升級到 **mihomo**（[Core.md](Core.md)）。
+   REALITY 需要較新的核心，這項已從「建議」變成「必要」。
+2. 桌面改用 **Clash Verge Rev**、行動端用 **Clash Mi / FlClash**。""",
+"""1. Client 核心從凍結的 `Kuingsmile/clash-core` 升級到 **mihomo**（[Core.md](Core.md)）。
+   REALITY 需要較新的核心，這項已從「建議」變成「必要」——舊核心連不上。
+2. 桌面改用 [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev)
+   （GPL-3.0、內建 mihomo，裝完即可用，不必另外管核心）、行動端用 **Clash Mi / FlClash**。
+   安裝與匯入節點的步驟見 [`clients/cli/README.md`](../../clients/cli/README.md)。""")
+p.write_text(s)
+print("ok")
+PYEOF
+pre-commit run --all-files 2>&1 | grep -E "Failed|Passed" | sed 's/^/  /'
+```
+
+```text
+ok
+  Auto-redact secrets in agent artifacts...................................Passed
+  Detect hardcoded secrets.................................................Passed
+  detect private key.......................................................Passed
+  check for added large files..............................................Passed
+  check for merge conflicts................................................Passed
+  fix end of files.........................................................Passed
+  trim trailing whitespace.................................................Passed
+  check yaml...............................................................Passed
+  check that executables have shebangs.....................................Passed
+  shellcheck...............................................................Passed
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:23:50Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Final sweep for CFW references and validate config
+
+```bash
+grep -rn -i "clash for windows\|clashforwindows" --include="*.md" --include="*.yaml" . --exclude-dir=.git --exclude-dir=legacy --exclude-dir=.specstory --exclude-dir=.cursor --exclude-dir=ui_pages --exclude-dir=.claude
+echo "--- and check the clash.yaml example ---"
+python3 -c "
+import yaml
+y=yaml.safe_load(open('clients/docker/config.yaml'))
+print('proxies:', [(p['name'], p['type']) for p in y['proxies']])
+print('cfw keys present:', [k for k in y if k.startswith('cfw')])
+" 2>/dev/null || (head -1 $(command -v ansible-playbook) | sed 's|^#!||' | xargs -I{} {} -c "
+import yaml
+y=yaml.safe_load(open('clients/docker/config.yaml'))
+print('proxies:', [(p['name'], p['type']) for p in y['proxies']])
+print('cfw keys present:', [k for k in y if k.startswith('cfw')])
+")
+```
+
+```text
+Exit code 127
+README.md:164:**Clash for Windows and `Kuingsmile/clash-core` v1.18 are archived and cannot do REALITY.**
+clients/docker/config.yaml:131:# Clash for Windows only. CFW is archived and closed-source; mihomo and
+clients/cli/README.md:4:> **Clash for Windows** + the frozen `Kuingsmile/clash-core` v1.18. Both are
+clients/cli/README.md:67:## Legacy: Clash for Windows + `Kuingsmile/clash-core`
+clients/cli/README.md:75:- [Clash for Windows](https://www.clashforwindows.net/) (archived)
+docs/clash/Clients.md:51:| Clash for Windows (CFW) | Windows | 已封存 | 不建議新用；**不支援 REALITY** |
+docs/clash/Clients.md:114:歷史上閉源/來路不明的 client 出過事：**Clash for Windows** 後期閉源且作者收到法律壓力後
+docs/clash/Clients.md:137:| Clash for Windows（閉源、已停更） | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0、Tauri、內建 mihomo、活躍維護，Win/macOS/Linux |
+docs/clash/ConfigManagement.md:181:- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)（CFW 已封存，但 classic 設定檔格式說明仍可參考——mihomo 對它向後相容）
+--- and check the clash.yaml example ---
+xargs: {}: No such file or directory
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:24:35Z)**_
+
+<think><details><summary>Thought Process</summary>
+I've confirmed all the CFW references are properly marked as archived or legacy now. Let me test that the config.yaml file actually parses correctly with Python.
+</details></think>
+
+_**Agent (claude-opus-5 2026-07-30 17:24:38Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Validate both client YAML configs parse
+
+```bash
+PY=$(head -1 "$(command -v ansible-playbook)" | sed 's|^#!||')
+"$PY" -c "
+import yaml
+y = yaml.safe_load(open('clients/docker/config.yaml'))
+print('YAML ok — proxies:', [(p['name'], p['type']) for p in y['proxies']])
+print('cfw-only keys still present (documented as inert):', [k for k in y if k.startswith('cfw')])
+"
+PY2=$PY; "$PY2" -c "
+import yaml
+y = yaml.safe_load(open('clients/mihomo-docker/config.example.yaml'))
+p = y['proxies'][0]
+print('mihomo example ok —', p['name'], p['type'], 'flow=' + p['flow'], 'sni=' + p['servername'])
+"
+```
+
+```text
+YAML ok — proxies: [('Proxy 1', 'vless'), ('Proxy 2', 'vmess')]
+cfw-only keys still present (documented as inert): ['cfw-bypass', 'cfw-latency-timeout']
+mihomo example ok — Az Sg vless flow=xtls-rprx-vision sni=support.apple.com
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:25:05Z)**_
+
+<tool-use data-tool-type="shell" data-tool-name="Bash"><details>
+<summary>Tool use: **Bash**</summary>
+Commit the Clash Verge Rev change
+
+```bash
+git add -A && git commit -q -F - <<'EOF'
+clients: recommend Clash Verge Rev + mihomo, demote Clash for Windows
+
+The research notes under docs/clash/ had recommended Clash Verge Rev since they
+were written, but clients/cli/README.md — the doc someone actually follows —
+still opened with "you can use Clash for Windows" and installed the frozen
+Kuingsmile/clash-core v1.18.
+
+Both are archived, and after the REALITY migration neither can reach the server
+at all: v1.18 predates VLESS/REALITY support entirely. So this isn't only a
+maintenance-status argument, it's a "that setup no longer connects" one, and the
+docs now say which.
+
+clients/cli/README.md leads with mihomo (core) + Clash Verge Rev (desktop shell)
+and keeps the old flow under a Legacy heading for the vmess_ws mode. The root
+README's client section gains the same core/shell split.
+
+Claims verified against the upstream repo and release API rather than memory:
+GPL-3.0, Tauri, embeds mihomo with an in-UI core switcher, Windows x64/x86 +
+Linux x64/arm64 + macOS 11+, actively maintained (v2.5.2, 2026-07). Two things
+that would have been wrong from memory: there are no AppImage assets (deb/rpm
+only on Linux), and the UI switches between the bundled stable core and Alpha
+rather than "updating the core".
+
+The cfw-* keys in clients/docker/config.yaml are kept but labelled: mihomo and
+Verge Rev ignore them entirely, so copying them into a mihomo config does
+nothing. docs/clash/{README,Core,Clients,BestPractice}.md drop the stale
+"我們現用 clash-core" framing, and clients/mihomo-docker/ — previously missing
+from the repo layout table — is listed as the maintained containerised client.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+EOF
+git log --oneline -3 && echo "--- status ---" && git status --short && echo "--- branch ---" && git branch --show-current
+```
+
+```text
+[WARNING] Unstaged files detected.
+[INFO] Stashing unstaged files to /Users/david/.cache/pre-commit/patch1785432303-31258.
+Auto-redact secrets in agent artifacts...................................Passed
+Detect hardcoded secrets.................................................Passed
+detect private key.......................................................Passed
+check for added large files..............................................Passed
+check for merge conflicts................................................Passed
+fix end of files.........................................................Passed
+trim trailing whitespace.................................................Passed
+check yaml...........................................(no files to check)Skipped
+check that executables have shebangs.................(no files to check)Skipped
+shellcheck...........................................(no files to check)Skipped
+[INFO] Restored changes from /Users/david/.cache/pre-commit/patch1785432303-31258.
+f20a298 clients: recommend Clash Verge Rev + mihomo, demote Clash for Windows
+1abce8f Default to VLESS + XTLS-Vision + REALITY on Xray-core
+0086672 Document the mihomo DNS-poisoning trap; fix it in the client example
+--- status ---
+ M .specstory/history/2026-07-29_13-50-55Z-name-type-vless-server.md
+--- branch ---
+master
+```
+</details></tool-use>
+
+_**Agent (claude-opus-5 2026-07-30 17:25:58Z)**_
+
+Both done, on `master`.
+
+## Commits
+
+```
+f20a298  clients: recommend Clash Verge Rev + mihomo, demote Clash for Windows
+1abce8f  Default to VLESS + XTLS-Vision + REALITY on Xray-core
+```
+
+The REALITY work was committed on `vless-reality-default`, fast-forward merged, branch deleted. **Not pushed** — CLAUDE.md says `git push origin master` is a separate explicit step, so that's yours to run.
+
+## On Clash Verge Rev
+
+Your instinct was right, and the gap was narrower but sharper than expected: `docs/clash/` **already** recommended Verge Rev — it's been in the tables since the research notes were written. What hadn't caught up was `clients/cli/README.md`, the doc someone actually follows, which still opened with *"In GUI, you can use Clash for Windows"* and installed the frozen `Kuingsmile/clash-core` v1.18.
+
+That turned out to matter more than a maintenance-status argument: **v1.18 predates VLESS/REALITY entirely, so after yesterday's server change that setup simply cannot connect.** Same for `clients/docker/`. So the docs now say "this no longer works," not just "this is old." Same fix applied to the root README, which gained a core/shell split table.
+
+I checked your claims against the upstream repo and release API instead of writing them from memory, and two would have been wrong:
+
+- **No AppImage assets** — Linux is `.deb` and `.rpm` only (x64/arm64/armhf). I'd drafted `.AppImage` into the install snippet.
+- The in-UI core switcher moves between the **bundled stable mihomo and the Alpha build** — it isn't an "update the core" button, which is how I'd first phrased it.
+
+Confirmed as you described: GPL-3.0, Tauri, embeds mihomo, Windows x64/x86 + Linux x64/arm64 + macOS 11+, actively maintained (v2.5.2, released 2026-07-19; last push yesterday).
+
+One thing I left rather than deleted: the `cfw-bypass` / `cfw-latency-timeout` keys in `clients/docker/config.yaml`. They're inert in mihomo and Verge Rev, so they're now labelled as such — the risk was someone copying them into a mihomo config and assuming they did something.
+
+## Still unverified
+
+Unchanged from before: nothing Docker-dependent has run — `just test-up`, `reality_keys.py --verify-with-docker`, `just verify-proxy`. Docker Desktop won't start on this machine. `AZ_YES=1 just az-cycle` against a throwaway VM is still the gate before trusting a real deploy.

@@ -1,15 +1,81 @@
-## Best Practice (I found)
+# Linux client setup
 
-In GUI, you can use "Clash for Windows" in Windows, MacOS, and Linux. They can share same config YAML.
+> **Read this first.** Everything below the "Legacy" heading describes
+> **Clash for Windows** + the frozen `Kuingsmile/clash-core` v1.18. Both are
+> archived, and **neither can terminate VLESS + REALITY**, which is what this
+> repo's server now speaks by default (see
+> [`docs/REALITY-MIGRATION.md`](../../docs/REALITY-MIGRATION.md)). They are kept
+> for the `vpn_protocol: vmess_ws` legacy mode and for historical reference.
 
-- [Clash for Windows](https://www.clashforwindows.net/)
-  - [Clash for Windows Download – Clash for Windows](https://www.clashforwindows.net/clash-for-windows-download/)
-  - [配置文件 | Clash for Windows 代理工具使用说明](https://docs.gtk.pw/contents/configfile.html#%E6%A0%BC%E5%BC%8F)
+## Recommended (2026)
 
-In CLI, you can use Clash-Core
+Two open-source pieces, split by role — the core sees all your traffic, so keep
+it open source and keep the shell separate from it. Rationale and the wider
+client landscape: [`docs/clash/Clients.md`](../../docs/clash/Clients.md) and
+[`docs/clash/BestPractice.md`](../../docs/clash/BestPractice.md).
 
+| Role | Pick | Why |
+|---|---|---|
+| Core | [**mihomo**](https://github.com/MetaCubeX/mihomo) | The de-facto standard; the only one of the Clash-family cores here that supports VLESS / XTLS-Vision / REALITY |
+| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) | GPL-3.0, Tauri, embeds mihomo and can switch cores from the UI. Windows x64/x86, Linux x64/arm64, macOS 11+ — actively maintained (v2.5.2, 2026-07) |
+| Headless / server | mihomo + [`clashtui`](https://github.com/JohanChane/clashtui) | Profile switching and subscription updates without a desktop |
+| Containerised | [`../mihomo-docker`](../mihomo-docker) | This repo's own mihomo compose setup |
+
+### Clash Verge Rev
+
+Linux ships as `.deb` and `.rpm` (x64 / arm64 / armhf) — no AppImage. Take them
+from the **official GitHub Releases page only**, never a mirror or network drive;
+every asset there is published with a `.sig` alongside it:
+
+<https://github.com/clash-verge-rev/clash-verge-rev/releases>
+
+```bash
+# Debian / Ubuntu — substitute the current version and arch from the releases page
+sudo dpkg -i Clash.Verge_<version>_amd64.deb
+sudo apt-get install -f          # pull in any missing deps
+
+# Fedora / RHEL
+sudo rpm -i Clash.Verge-<version>-1.x86_64.rpm
+```
+
+Then import the node: run `just az-client` on the machine that holds the vault
+and paste the `vless://` line from `out/client/vless.txt` into
+**Profiles → New → Import from clipboard**. Don't hand-copy the public key and
+short ID — a single wrong character fails the handshake in a way that looks
+exactly like being blocked.
+
+Verge Rev embeds mihomo (Clash.Meta), so there is nothing else to install — and
+the core switcher under **Settings** lets you move between the bundled stable
+core and the Alpha build without touching the filesystem.
+
+### Headless Linux (no desktop)
+
+Use mihomo directly. The compose setup in [`../mihomo-docker`](../mihomo-docker)
+is the maintained path in this repo — it already carries the DNS configuration
+that a CN-side client needs (see
+[`pitfalls/browser-cannot-load-google-match-final-bare-ip.md`](../../pitfalls/browser-cannot-load-google-match-final-bare-ip.md)),
+which is easy to get subtly wrong from scratch.
+
+For a bare binary + systemd instead, take a release from
+[MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo/releases) and point it at
+the same `config.yaml`. [`clashtui`](https://github.com/JohanChane/clashtui) or
+[ShellCrash](https://github.com/juewuy/ShellCrash) will manage profiles and the
+service unit for you.
+
+---
+
+## Legacy: Clash for Windows + `Kuingsmile/clash-core`
+
+Kept for reference and for the `vpn_protocol: vmess_ws` mode. **Clash for
+Windows is archived and closed-source** — see the trust discussion in
+[`docs/clash/Clients.md`](../../docs/clash/Clients.md#非開源-client-的信任問題與替代選項).
+`Kuingsmile/clash-core` is a frozen v1.18 mirror of the original Dreamacro
+core: no REALITY, no VLESS.
+
+- [Clash for Windows](https://www.clashforwindows.net/) (archived)
+  - [配置文件 | 使用说明](https://docs.gtk.pw/contents/configfile.html#%E6%A0%BC%E5%BC%8F) — still a decent reference for the *classic* config-file format, which mihomo remains backward-compatible with
 - [**Releases · Kuingsmile/clash-core**](https://github.com/Kuingsmile/clash-core/releases)
-- [在 Linux 通过 cli 使用 Clash | Clash for Windows 代理工具使用说明](https://docs.gtk.pw/contents/linux/clash-cli.html#%E5%AE%89%E8%A3%85-installation) => setup `systemctl` service if needed
+- [在 Linux 通过 cli 使用 Clash](https://docs.gtk.pw/contents/linux/clash-cli.html#%E5%AE%89%E8%A3%85-installation) => setup `systemctl` service if needed
 - [本地安装ShellCrash的教程 | Juewuy's Blog](https://juewuy.github.io/bdaz/)
 
 ```bash
@@ -37,16 +103,18 @@ INFO[0790] [TCP] 127.0.0.1:52190 --> dc.services.visualstudio.com:443 match Doma
 
 ## Dashboard (for CLI)
 
-TODO:
+Verge Rev has this built in. For a bare mihomo, point a dashboard at the
+external controller (set a `secret` first — see
+[`docs/clash/API.md`](../../docs/clash/API.md)):
 
-- [haishanh/yacd: Yet Another Clash Dashboard](https://github.com/haishanh/yacd?tab=readme-ov-file)
-- [haishanh/yacd - Docker Image | Docker Hub](https://hub.docker.com/r/haishanh/yacd)
+- [metacubexd](https://github.com/MetaCubeX/metacubexd) / [zashboard](https://github.com/Zephyruso/zashboard) — current, mihomo-aware
+- [haishanh/yacd](https://github.com/haishanh/yacd?tab=readme-ov-file) — what [`../docker/`](../docker/) bundles; older
 
 ## Todo
 
 Ubuntu
 
-- [ ] Make clash a system service (`systemctl`)
+- [ ] Make mihomo a system service (`systemctl`)
 - [ ] Update environment variable in shell configure
 
 ---

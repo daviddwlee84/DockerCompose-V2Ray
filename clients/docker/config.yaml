@@ -128,7 +128,10 @@ rules:
   # Everything is not captured by rules goes here
   - MATCH,Final
 
-# Clash for Windows
+# Clash for Windows only. CFW is archived and closed-source; mihomo and
+# Clash Verge Rev IGNORE every cfw-* key, so don't carry these into a mihomo
+# config expecting them to do anything — set the equivalents under the GUI's own
+# bypass/latency settings instead. See clients/cli/README.md.
 cfw-bypass:
   - qq.com
   - music.163.com

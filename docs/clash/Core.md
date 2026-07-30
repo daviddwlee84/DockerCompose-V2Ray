@@ -8,8 +8,9 @@
 
 ## TL;DR
 
-- 我們現用的是 `Kuingsmile/clash-core` **v1.18.0** —— 原版 Dreamacro Clash 的維護鏡像，
-  與原版同一系，**已停在 2023 年的能力上、不再有新協議與安全更新**。
+- [`clients/docker/`](../../clients/docker/) 仍綁 `Kuingsmile/clash-core` **v1.18.0**
+  —— 原版 Dreamacro Clash 的維護鏡像，與原版同一系，**已停在 2023 年的能力上、
+  不再有新協議與安全更新**。自 2026-07 server 端改用 REALITY 之後，它**連不上**了。
 - **Mihomo（MetaCubeX，前稱 Clash.Meta）** 是 2026 年事實上的標準核心，持續維護，
   新增 Hysteria2 / TUIC v5 / VLESS+REALITY / SS2022 等現代協議，且 **YAML 向後相容**
   —— 對我們而言基本上「換 binary 即可」。
@@ -24,12 +25,12 @@ flowchart TD
   base["Clash 開源基座<br/>(Dreamacro/clash)"]
   base --> premium["Clash Premium<br/>(閉源, TUN / profile.tracing)<br/>已凍結"]
   base --> original["原版 Clash core<br/>2023-11 封存唯讀"]
-  original --> kuingsmile["Kuingsmile/clash-core v1.18.0<br/>(我們現用, 同系鏡像/維護)"]
+  original --> kuingsmile["Kuingsmile/clash-core v1.18.0<br/>(clients/docker/ 仍用, 同系鏡像)"]
   base --> meta["Clash.Meta<br/>2024 改名 →"]
   meta --> mihomo["Mihomo (MetaCubeX/mihomo)<br/>2026 事實標準, 持續維護"]
 ```
 
-| 維度 | 原版 Clash / 我們的 `Kuingsmile/clash-core` | Clash Premium | Mihomo (Clash.Meta) |
+| 維度 | 原版 Clash / `Kuingsmile/clash-core` | Clash Premium | Mihomo (Clash.Meta) |
 |---|---|---|---|
 | 維護狀態 | 原版 2023-11 封存；鏡像僅補丁，無新協議 | 凍結（閉源） | **持續維護**，頻繁發版 |
 | Hysteria2 | 不支援 | 不支援 | **支援** |

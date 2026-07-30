@@ -178,5 +178,5 @@ flowchart TD
 - [mihomo config 總覽](https://wiki.metacubex.one/en/config/)
 - [proxy-providers](https://wiki.metacubex.one/en/config/proxy-providers/) ／
   [rule-providers](https://wiki.metacubex.one/en/config/rule-providers/)
-- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)
+- [配置文件 | Clash for Windows 說明](https://docs.gtk.pw/contents/configfile.html)（CFW 已封存，但 classic 設定檔格式說明仍可參考——mihomo 對它向後相容）
 - [Clash Verge Rev：多訂閱合併 / 配置案例](https://www.clashverge.dev/index.html)
