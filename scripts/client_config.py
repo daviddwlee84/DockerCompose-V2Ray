@@ -34,7 +34,9 @@ Writes to out/client/ (or out/client/<rg>/ when an RG is passed):
       config.json       pretty inner JSON
       clash-vmess.yaml  mihomo VMess proxy entry (clash.yaml when VMess is the only mode)
       qr-vmess.png      PNG QR of the vmess:// link (qr.png when VMess is the only mode)
-    human.md            human-readable field table for whatever was emitted
+    ALL MODES:
+      clash-verge.yaml  complete local Clash Verge Rev profile (all emitted nodes)
+      human.md          human-readable field table for whatever was emitted
 
 Also prints the human-readable block and an ASCII QR in the terminal.
 
@@ -288,6 +290,32 @@ def vless_clash_proxy(domain: str, uuid: str, remark: str, sni: str,
     }
 
 
+def clash_verge_profile(proxies: list[dict]) -> dict:
+    """A complete minimal local profile accepted by Clash Verge Rev/mihomo.
+
+    `clash.yaml` intentionally remains a small `proxies:` fragment for users
+    who already maintain a base config. This companion adds the group and
+    catch-all rule required for a standalone profile that can be dropped onto
+    Verge's Profiles page. App-level inbound/TUN settings remain Verge-owned.
+    """
+    if not proxies:
+        raise ValueError("at least one proxy is required")
+
+    names = [proxy["name"] for proxy in proxies]
+    return {
+        "mode": "rule",
+        "proxies": proxies,
+        "proxy-groups": [
+            {
+                "name": "PROXY",
+                "type": "select",
+                "proxies": [*names, "DIRECT"],
+            }
+        ],
+        "rules": ["MATCH,PROXY"],
+    }
+
+
 def vless_xray_client(domain: str, uuid: str, sni: str, public_key: str,
                       short_id: str, fingerprint: str, socks_port: int = 10808) -> dict:
     """A complete Xray client config — importable into v2rayN, and what
@@ -454,6 +482,8 @@ def human_readable(protocol: str, reality: dict | None, vmess: dict | None,
         "- Paste the URL into Shadowrocket / v2rayN / v2rayNG via \"Import from clipboard\",",
         "  or scan the matching `qr*.png` (\"Scan from album\").",
         "- For Clash / mihomo, merge `clash.yaml` into your config's `proxies:` list.",
+        "- For Clash Verge Rev, drop `clash-verge.yaml` onto the Profiles page; its",
+        "  subscription URL field accepts only http(s), not a bare vless:// URI.",
         "- `just verify-proxy` runs `xray-client.json` through a throwaway container to",
         "  confirm traffic really flows, not just that the handshake looks right.",
         "",
@@ -558,6 +588,7 @@ def main() -> int:
 
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
+    clash_proxies: list[dict] = []
     reality_fields = None
     vmess_payload = None
     vless_link = None
@@ -572,6 +603,7 @@ def main() -> int:
         }
         vless_link = vless_url(domain, uuid, remark, sni, public_key, short_id, fingerprint)
         clash = vless_clash_proxy(domain, uuid, remark, sni, public_key, short_id, fingerprint)
+        clash_proxies.append(clash)
         xray_client = vless_xray_client(domain, uuid, sni, public_key, short_id, fingerprint)
 
         (out_dir / "vless.txt").write_text(vless_link + "\n")
@@ -585,6 +617,7 @@ def main() -> int:
         vmess_payload = build_vmess_payload(domain, uuid, remark, ws_path, vmess_port)
         vmess_link = vmess_url(vmess_payload)
         vmess_clash = vmess_clash_proxy(domain, uuid, remark, ws_path, vmess_port)
+        clash_proxies.append(vmess_clash)
 
         (out_dir / "vmess.txt").write_text(vmess_link + "\n")
         (out_dir / "config.json").write_text(
@@ -596,6 +629,16 @@ def main() -> int:
         qr_name = "qr-vmess.png" if protocol == "both" else "qr.png"
         write_png_qr(vmess_link, out_dir / qr_name)
         written += ["vmess.txt", "config.json", clash_name, qr_name]
+
+    if clash_proxies:
+        with (out_dir / "clash-verge.yaml").open("w") as fh:
+            yaml.safe_dump(
+                clash_verge_profile(clash_proxies),
+                fh,
+                allow_unicode=True,
+                sort_keys=False,
+            )
+        written.append("clash-verge.yaml")
 
     human = human_readable(protocol, reality_fields, vmess_payload, vless_link, vmess_link)
     (out_dir / "human.md").write_text(human)

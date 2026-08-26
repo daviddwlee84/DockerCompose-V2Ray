@@ -23,30 +23,11 @@ client landscape: [`docs/clash/Clients.md`](../../docs/clash/Clients.md) and
 
 ### Clash Verge Rev
 
-Linux ships as `.deb` and `.rpm` (x64 / arm64 / armhf) — no AppImage. Take them
-from the **official GitHub Releases page only**, never a mirror or network drive;
-every asset there is published with a `.sig` alongside it:
-
-<https://github.com/clash-verge-rev/clash-verge-rev/releases>
-
-```bash
-# Debian / Ubuntu — substitute the current version and arch from the releases page
-sudo dpkg -i Clash.Verge_<version>_amd64.deb
-sudo apt-get install -f          # pull in any missing deps
-
-# Fedora / RHEL
-sudo rpm -i Clash.Verge-<version>-1.x86_64.rpm
-```
-
-Then import the node: run `just az-client` on the machine that holds the vault
-and paste the `vless://` line from `out/client/vless.txt` into
-**Profiles → New → Import from clipboard**. Don't hand-copy the public key and
-short ID — a single wrong character fails the handshake in a way that looks
-exactly like being blocked.
-
-Verge Rev embeds mihomo (Clash.Meta), so there is nothing else to install — and
-the core switcher under **Settings** lets you move between the bundled stable
-core and the Alpha build without touching the filesystem.
+The full desktop runbook now lives in
+[`../clash-verge/README.md`](../clash-verge/README.md): official package install,
+`just az-client` import, traffic verification, System Proxy vs TUN, conflicts
+with a second mihomo service, and Linux duplicate launcher IDs. Verge Rev
+embeds mihomo, so there is no separate core to install.
 
 ### Headless Linux (no desktop)
 

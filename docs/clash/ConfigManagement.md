@@ -168,10 +168,11 @@ flowchart TD
 - 今天 [`clients/docker/config.yaml`](../../clients/docker/config.yaml) 是全 inline 的反例。
   系統化重構方向：保留 general/dns/groups 骨架 → 節點移到 `proxy-providers` →
   規則移到 `rule-providers`。
-- repo 目前用 `just az-client` 產出**靜態** `clash.yaml`（見根
-  [`README.md`](../../README.md) 的 Azure 章節）。未來可改成輸出 **provider 版**
-  （base + 指向自家訂閱/規則 URL），讓多端共享同一份可熱更新設定。
-- 本次為研究記錄，**不改動 client 設定或產生器**；以上為後續方向。
+- repo 目前用 `just az-client` 產出**靜態** `clash.yaml` 節點 fragment，另產生可直接
+  拖入 Clash Verge Rev 的完整本地 `clash-verge.yaml`（見
+  [`clients/clash-verge/README.md`](../../clients/clash-verge/README.md)）。兩者仍是快照；
+  未來可再輸出 **provider 版**（base + 指向自家訂閱/規則 URL），讓多端共享同一份
+  可熱更新設定。
 
 ## 參考
 

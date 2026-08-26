@@ -73,7 +73,8 @@ Server 端（第 5 項）已完成，剩下的都是 client 端：
    REALITY 需要較新的核心，這項已從「建議」變成「必要」——舊核心連不上。
 2. 桌面改用 [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev)
    （GPL-3.0、內建 mihomo，裝完即可用，不必另外管核心）、行動端用 **Clash Mi / FlClash**。
-   安裝與匯入節點的步驟見 [`clients/cli/README.md`](../../clients/cli/README.md)。
+   安裝、匯入節點、驗證流量與 Linux 重複 launcher 除錯見
+   [`clients/clash-verge/README.md`](../../clients/clash-verge/README.md)。
 3. [`clients/docker/config.yaml`](../../clients/docker/config.yaml) 設 `secret`、
    隨機 WS path（[API.md](API.md) / [Core.md](Core.md)）。
 4. 設定 URL 化：節點走 proxy-providers、規則走 rule-providers（[ConfigManagement.md](ConfigManagement.md)）。

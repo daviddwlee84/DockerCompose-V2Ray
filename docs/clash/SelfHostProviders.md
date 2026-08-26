@@ -262,14 +262,15 @@ Loyalsoldier/meta-rules-dat 的通用集，只自維護「你個人專屬」那�
 
 - 在 nginx 加一個 `location /provider/`（建議 basic-auth 或隱秘路徑）指向一個目錄，
   放 `nodes.yaml` / 規則檔，client 端用該 URL 當 `proxy-providers` / `RULE-SET`。
-- 產生器面：`just az-client` 目前輸出**靜態** `out/client/clash.yaml`（見根
-  [`README.md`](../../README.md)）；可擴充成同時輸出 `nodes.yaml`（provider 版）與
-  `shadowrocket.conf`，並（可選）推送到上述 nginx 路徑。
+- 產生器面：`just az-client` 目前輸出**靜態** `out/client/clash.yaml` 節點 fragment
+  與完整本地 `clash-verge.yaml`（見
+  [`clients/clash-verge/README.md`](../../clients/clash-verge/README.md)）；可再擴充成
+  `nodes.yaml`（provider 版）與 `shadowrocket.conf`，並（可選）推送到上述 nginx 路徑。
 - 機敏處理沿用既有機制：[`scripts/redact_secrets.py`](../../scripts/redact_secrets.py)、
   pre-commit 的 gitleaks——確保節點/UUID 不外洩。
 
-> 以上為方向與範例，**本次僅文檔，不改動 server / client 代碼**（協議與 nginx 變更
-> 仍受 [CLAUDE.md](../../CLAUDE.md) 約束）。
+> 以上 provider host 仍是方向與範例；本次只新增本地 Verge profile 產物，不改動
+> server/nginx。協議與 nginx 變更仍受 [CLAUDE.md](../../CLAUDE.md) 約束。
 
 ## 參考
 

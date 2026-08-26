@@ -52,7 +52,8 @@ See [`ansible/README.md`](ansible/README.md) for details (role structure, vault 
 | `ansible/` | Playbooks, roles (`common`, `docker`, `vpn`, `letsencrypt`), inventory, vault. |
 | `scripts/` | `install_docker.sh` (rootful bootstrap), `reality_keys.py` (x25519 keypair + short ID), `client_config.py` (client configs), `verify.sh` (front-door smoke test), `verify_proxy.sh` (end-to-end tunnel test). |
 | `Justfile` | Laptop-side wrapper: `deploy`, `deploy-fast`, `reality-keys`, `rotate-uuid`, `verify`, `verify-proxy`, `logs-*`, `vault-edit`. |
-| `clients/cli/` | Linux client setup: recommends mihomo + Clash Verge Rev; the archived Clash-for-Windows / `clash-core` v1.18 flow is kept below a Legacy heading (it cannot do REALITY). |
+| `clients/clash-verge/` | Desktop Clash Verge Rev runbook: official package install, generated-node import, traffic verification, two-core conflicts, and Linux duplicate-launcher diagnosis. |
+| `clients/cli/` | Headless Linux client setup; the archived Clash-for-Windows / `clash-core` v1.18 flow is kept below a Legacy heading (it cannot do REALITY). |
 | `clients/mihomo-docker/` | Dockerized **mihomo** client — the maintained one. `config.example.yaml` carries a VLESS+REALITY proxy plus the CN-side DNS setup. |
 | `clients/docker/` | Dockerized Clash v1.18 proxy + YACD dashboard (git submodule). **No REALITY support** — use `clients/mihomo-docker/` instead. |
 | `docs/` | `DeploymentEvaluation.md` + `BareMetalEvaluation.md` (why Ansible + Docker Compose, not Terraform + systemd), `ProtocolEvaluation.md` (why the default moved off VMess: an audit of what this repo actually shipped, plus VLESS/Reality/Hysteria2/etc. compared with GFW detection risk), `REALITY-MIGRATION.md` (the three `vpn_protocol` modes, key material, picking a `dest`, the pitfalls, rollback), `IP-ROTATION.md` (rotate a GFW-banned Azure IP while keeping the FQDN), `MULTI-HOST.md` (run multiple region VMs at once), `LOG-ROTATION.md` (logrotate config + manual patch recipe for a running VPS), `OBSERVABILITY.md` (optional central Grafana LGTM for a fleet — outbound metrics + logs, a `$server` plug-and-play dashboard, and the Xray StatsService as the one server-side tuning knob), `clash/` (client-side research notes: a recommended best-practice combo, mihomo vs current core, observability via Grafana/LGTM, the 9090 RESTful API, the client landscape incl. mobile, systematic config management, and how to self-host node/rule providers for Clash + Shadowrocket), `LEGACY.md` (pre-refactor flow), `old/` (archived notes: `FlowCharts.md` Clash routing, `XrayUI.md` alt admin panels). |
@@ -73,7 +74,7 @@ just az-up            # preview cost, create RG + B2ats_v2 VM + NSG (22/80/443) 
 just az-configure     # render inventory/prod.ini + per-host host_vars/<rg>/vault.yml
 just deploy           # existing ansible flow (common + docker + vpn + letsencrypt)
 just verify           # with exactly one tracked VM; else RG=<rg> just verify
-just az-client        # emit out/client/{vless.txt,xray-client.json,clash.yaml,human.md,qr.png}
+just az-client        # emit URLs, test config, fragments, and a ready-to-import clash-verge.yaml
 just verify-proxy     # dial the node with a real xray client and confirm traffic flows
 just az-rotate-ip     # rotate the public IP, keep the FQDN (use when GFW-banned; see docs/IP-ROTATION.md)
 just az-down -y       # delete the RG (-y skips the type-the-name confirm)
@@ -126,8 +127,9 @@ failed to provision cleanly but is still reachable).
 ## Client setup
 
 Don't hand-copy fields — `just az-client` (or `scripts/client_config.py`) reads the vault and
-emits ready-to-import configs for whatever `vpn_protocol` is deployed:
-a `vless://` URL, an `xray-client.json`, a mihomo `clash.yaml`, a QR PNG and a field table.
+emits client material for whatever `vpn_protocol` is deployed: a `vless://`
+URL, an `xray-client.json`, a mihomo `clash.yaml` fragment, a complete local
+`clash-verge.yaml`, a QR PNG and a field table.
 
 ### VLESS + REALITY (default) — Shadowrocket, v2rayN, v2rayNG, mihomo
 
@@ -153,18 +155,20 @@ Pick an open-source core plus an open-source shell — the core sees all your tr
 | Role | Use |
 |---|---|
 | Core | [**mihomo**](https://github.com/MetaCubeX/mihomo) — the only Clash-family core here that speaks VLESS / Vision / REALITY |
-| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) — GPL-3.0, Tauri, embeds mihomo and switches cores from the UI. Windows / macOS 11+ / Linux |
+| Desktop GUI | [**Clash Verge Rev**](https://github.com/clash-verge-rev/clash-verge-rev) — GPL-3.0, Tauri, embeds mihomo and switches cores from the UI. Windows / macOS 11+ / Linux. See the [local setup runbook](clients/clash-verge/README.md). |
 | Mobile | [Clash Mi](https://github.com/KaringX/clashmi) / [FlClash](https://github.com/chen08209/FlClash) |
 | Containerised | [`clients/mihomo-docker/`](clients/mihomo-docker/README.md) — its `config.example.yaml` carries a VLESS+REALITY proxy in the right shape |
 
-Import by pasting `out/client/vless.txt` (from `just az-client`) rather than typing the
-public key and short ID by hand — one wrong character fails the handshake in a way that
-looks exactly like being blocked.
+For Clash Verge Rev, drag the generated `out/client/clash-verge.yaml` onto its Profiles
+page. Use `vless.txt` for clients that accept URI import. Do not type the public key and
+short ID by hand — one wrong character fails the handshake in a way that looks exactly
+like being blocked.
 
 **Clash for Windows and `Kuingsmile/clash-core` v1.18 are archived and cannot do REALITY.**
-[`clients/cli/README.md`](clients/cli/README.md) covers the Linux setup and keeps the old
-flow under a Legacy heading; [`clients/docker/`](clients/docker/README.md) is that older
-core. Background: [`docs/clash/Clients.md`](docs/clash/Clients.md).
+[`clients/clash-verge/README.md`](clients/clash-verge/README.md) covers the desktop setup,
+import, verification, and duplicate-launcher diagnosis. [`clients/cli/README.md`](clients/cli/README.md)
+keeps the old flow under a Legacy heading; [`clients/docker/`](clients/docker/README.md) is
+that older core. Background: [`docs/clash/Clients.md`](docs/clash/Clients.md).
 
 ## Troubleshooting
 

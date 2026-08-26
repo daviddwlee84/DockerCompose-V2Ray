@@ -102,7 +102,7 @@ Shadowrocket。
 
 | 情境 | 建議 |
 |---|---|
-| 桌面日常使用（Win/macOS/Linux） | **Clash Verge Rev**（內建 mihomo，最省心） |
+| 桌面日常使用（Win/macOS/Linux） | **Clash Verge Rev**（內建 mihomo，最省心）；操作見 [`clients/clash-verge/`](../../clients/clash-verge/README.md) |
 | 無頭 Linux / 伺服器 / 旁路由 | **mihomo 核心 + `clashtui`**，或 **ShellCrash** 一鍵透明代理 |
 | 行動裝置 | **FlClash / Clash Mi**（Android）、**Clash Mi / sing-box**（iOS，開源）；不介意閉源付費才選 Shadowrocket |
 | 本地 Docker 快速測試（本 repo） | 現有 [`clients/docker/`](../../clients/docker/)，建議把核心從 `clash-core` 升級為 **mihomo**（見 [Core.md](Core.md)） |
